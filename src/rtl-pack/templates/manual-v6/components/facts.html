@@ -1,0 +1,11 @@
+<section class="panel provenance provenance-fact" data-provenance="compiler-fact">
+  <span class="provenance-label">Slang / 编译器事实</span>
+  <h2>确定性事实</h2>
+  <p class="provenance-grounding">每条事实仅列出直接支持它的源码证据；下方单独列出本页的证据清单。</p>
+  {% if page.preview.facts %}
+  <table><thead><tr><th>关系类型</th><th>主体</th><th>客体</th><th>生成工具</th><th>源码证据</th></tr></thead><tbody>
+  {% for fact in page.preview.facts %}<tr><td><code>{{ fact.predicate }}</code></td><td>{{ model.entities[fact.subject_id].qualified_name }}</td><td>{{ model.entities[fact.object_id].qualified_name }}</td><td>{{ fact.producer }}</td><td>{% if fact.evidence %}<ul>{% for evidence in fact.evidence %}<li>{% if evidence.source_entity_id in page_map %}<a href="{{ href(page_map[evidence.source_entity_id], evidence.fragment) }}"><code>{{ evidence.path }}{% if evidence.fragment %}:{{ evidence.fragment }}{% endif %}</code></a>{% else %}<code>{{ evidence.path }}{% if evidence.fragment %}:{{ evidence.fragment }}{% endif %}</code>{% endif %} <span class="badge">{{ evidence.status }}</span>{% if evidence.sha256 %}<br><span class="identity">SHA-256 {{ evidence.sha256[:12] }}…</span>{% endif %}</li>{% endfor %}</ul>{% else %}<span class="muted">NOT_AVAILABLE</span>{% endif %}</td></tr>{% endfor %}
+  </tbody></table>
+  {% if page.facts|length > page.preview.facts|length %}<p class="more">当前展示 {{ page.preview.facts|length }} / {{ page.facts|length }} 条确定性事实。</p>{% endif %}
+  {% else %}<p class="muted">当前范围内没有确定性事实。</p>{% endif %}
+</section>

@@ -1,0 +1,30 @@
+# Agent 客户端的可选派生视图，不是正本。
+.agents/skills/
+.claude/skills/
+.claude/keep-skills.local
+
+# 项目本地生成物。
+.codegraph/
+.derived/
+.worktrees/
+__pycache__/
+*.py[cod]
+
+# 本地RTL运行Workspace和用户级工具安装，不进入项目正本。
+/src/workspace/
+/projects/*
+!/projects/example/
+/projects/example/analysis/*
+!/projects/example/analysis/.gitkeep
+/.local/
+/web/previews/
+
+# 本地截图与交流附件。
+/tmp/
+
+# 本地凭据与编辑器环境。
+.env
+.env.*
+!.env.example
+*.pem
+*.key

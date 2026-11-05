@@ -1,0 +1,25 @@
+{
+  "modules": {
+    "leaf_in": {
+      "ports": {
+        "control": {"direction": "input", "bits": [8]}
+      },
+      "netnames": {
+        "control": {
+          "hide_name": 0,
+          "bits": [8],
+          "attributes": {"src": "/src/leaf_in.sv:8.1-8.10"}
+        }
+      },
+      "cells": {
+        "$fsm$state$1": {
+          "type": "$fsm",
+          "parameters": {"STATE_BITS": "00000000000000000000000000000001"},
+          "attributes": {"src": "/src/leaf_in.sv:9.1-12.10"},
+          "port_directions": {"CTRL_IN": "input", "CTRL_OUT": "output"},
+          "connections": {"CTRL_IN": [8], "CTRL_OUT": [9]}
+        }
+      }
+    }
+  }
+}

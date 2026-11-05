@@ -1,0 +1,9 @@
+{
+  "model": "analysis/model/rtl-project-model.sqlite",
+  "operation": null,
+  "project": null,
+  "request": {},
+  "schema": "rtl-project-model-task/v1",
+  "status": "pending",
+  "task_id": null
+}

@@ -1,0 +1,6 @@
+<header class="page-header">
+  <p class="eyebrow">{{ object_kind_label|display_text }}</p>
+  <h1>{{ page.qualified_name }}</h1>
+  <p class="identity">{{ page.entity_id }}</p>
+  {% if page.structured_path is defined %}<a class="detail-link" href="{{ href(page.structured_path) }}">查看结构化数据</a>{% endif %}
+</header>

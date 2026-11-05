@@ -1,0 +1,23 @@
+{
+  "schema": "rtl-analysis-agent/targets-v1",
+  "targets": [
+    {
+      "name": "openc910",
+      "repository": "https://github.com/XUANTIE-RV/openc910.git",
+      "revision": "b91c90914c19f114d35c8f6b73408eb241ed847c",
+      "workspace": "src/workspace/projects/openc910/source"
+    },
+    {
+      "name": "serv",
+      "repository": "https://github.com/olofk/serv.git",
+      "revision": "f200eb2ed7b69ac1c6b8eddd47654522aeee5ce8",
+      "workspace": "src/workspace/projects/serv/source"
+    },
+    {
+      "name": "ibex",
+      "repository": "https://github.com/lowRISC/ibex.git",
+      "revision": "e1a6be2c1b32e2cbae6afef23fe8285577c00a68",
+      "workspace": "src/workspace/projects/ibex/source"
+    }
+  ]
+}

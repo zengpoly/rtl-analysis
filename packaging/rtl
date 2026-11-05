@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eu
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
+export PATH="$ROOT/vendor/python/bin:$PATH"
+unset PYTHONPATH PYTHONHOME
+export PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1
+export TMPDIR="$ROOT/.local/tmp"
+export XDG_CACHE_HOME="$ROOT/.local/cache"
+export RTL_ANALYSIS_TOOL_ROOT="$ROOT/.local/tools"
+export RTL_ANALYSIS_TMPDIR="$TMPDIR"
+export YOWASP_CACHE_DIR="$XDG_CACHE_HOME/yowasp"
+mkdir -p "$TMPDIR" "$XDG_CACHE_HOME"
+exec "$ROOT/vendor/python/bin/python3" "$ROOT/src/rtl-pack/bin/rtl" "$@"

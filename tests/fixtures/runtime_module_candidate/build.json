@@ -1,0 +1,11 @@
+{
+  "schema": "rtl-analysis-agent/runtime-query-build-v1",
+  "files": ["leaf.sv", "top.sv"],
+  "filelists": [],
+  "include_dirs": [],
+  "defines": [],
+  "tops": ["fixture_top"],
+  "top_parameters": {},
+  "single_unit": true,
+  "environment": {}
+}

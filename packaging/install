@@ -1,0 +1,28 @@
+#!/bin/sh
+set -eu
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
+cd "$ROOT"
+fail() {
+    echo "install: FAIL $*" >&2
+    echo '请向交付方取得“V1 离线安装包（Linux x86_64）”，在联网机器取得完整 rtl-analysis-agent-V1-linux-x86_64.tar.gz 后转入离线机器重新解压。Source code zip/tar 源码归档不包含运行时和缓存。' >&2
+    exit 1
+}
+for required in vendor/python/bin/python3 SHA256SUMS runtime-lock.json src/rtl-pack/config/toolchain.json src/rtl-pack/scripts/install-tools; do
+    [ -f "$ROOT/$required" ] || fail "离线包缺少 $required；需要完整离线包（含 vendor/python/bin/python3 和 SHA256SUMS）。"
+done
+[ -x "$ROOT/vendor/python/bin/python3" ] || fail 'vendor/python/bin/python3 不可执行；请保留压缩包文件权限。'
+if ! sha256sum -c --quiet SHA256SUMS; then
+    fail '离线包文件缺失或 SHA256 校验失败；安装已停止。'
+fi
+export PATH="$ROOT/vendor/python/bin:$PATH"
+unset PYTHONPATH PYTHONHOME
+export PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1
+export TMPDIR="$ROOT/.local/tmp"
+export XDG_CACHE_HOME="$ROOT/.local/cache"
+export RTL_ANALYSIS_TOOL_ROOT="$ROOT/.local/tools"
+export RTL_ANALYSIS_TMPDIR="$TMPDIR"
+export YOWASP_CACHE_DIR="$XDG_CACHE_HOME/yowasp"
+mkdir -p "$TMPDIR" "$XDG_CACHE_HOME"
+"$ROOT/vendor/python/bin/python3" "$ROOT/src/rtl-pack/scripts/install-tools" --offline
+"$ROOT/bin/rtl" doctor
+echo '安装完成。运行 ./bin/rtl --project projects/example doctor 检查示例工程。'

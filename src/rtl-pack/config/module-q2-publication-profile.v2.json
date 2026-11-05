@@ -1,0 +1,498 @@
+{
+  "applicability": {
+    "composition": "finite nonempty sets, conjunction; each child inherits or narrows parent values; empty intersection rejects",
+    "dimensions": {
+      "instance_id": {
+        "kind": "entity_ref",
+        "membership": "KNOWLEDGE_SCOPE"
+      }
+    },
+    "module_reuse": "Exact instance by default; cross-instance definition reuse requires structured reuse_basis and independent review of all included instances",
+    "schema": "rtl-analysis-agent/applicability-v1"
+  },
+  "behavior_types": {
+    "FLOW": {
+      "owner_kinds": [
+        "rtl.sv/1:module",
+        "rtl.sv/1:instance"
+      ],
+      "owner_subject_id": null,
+      "ownership_modes": [
+        "SUBJECT",
+        "SCOPE"
+      ],
+      "review_must_confirm_scope_owned": true
+    },
+    "FSM": {
+      "owner_kinds": [
+        "rtl.sv/1:module",
+        "rtl.sv/1:instance"
+      ],
+      "ownership_modes": [
+        "SUBJECT"
+      ]
+    }
+  },
+  "binding": {
+    "candidate": "analysis_scope profile/vocabulary identities, immutable build/source identity and candidate contract_version must match the pinned contract",
+    "canonical_bytes": "Raw UTF-8 JSON bytes as shipped are authoritative; sorted keys and indentation aid review.",
+    "same_identity_different_digest": "REJECT; a changed rule needs a new version and candidate",
+    "sha256": "SHA-256 of exact raw Profile bytes; new candidate metadata and complete I pin this digest and identities."
+  },
+  "claim_shapes": {
+    "module-q2.flow-step@2": {
+      "fact_content": {
+        "minimum_quality": "PARTIAL",
+        "required_fields": [
+          "entry",
+          "step",
+          "condition",
+          "effect",
+          "boundary",
+          "inference_basis"
+        ]
+      },
+      "fact_gap": {
+        "gap_kinds": [
+          "COMPILER_FACT_ABSENT",
+          "SEMANTICS_UNRESOLVED"
+        ],
+        "required": [
+          "missing_fact_content",
+          "affected_fields",
+          "affected_obligations",
+          "direct_source_rationale",
+          "remaining_limitations",
+          "gap_kind"
+        ],
+        "schema": "rtl-analysis-agent/fact-gap-v1",
+        "unresolved_semantics_cannot_close_ready": true
+      },
+      "fields": {
+        "boundary": {
+          "kind": "scalar",
+          "required": true
+        },
+        "condition": {
+          "kind": "scalar",
+          "required": true
+        },
+        "effect": {
+          "kind": "scalar",
+          "required": true
+        },
+        "entry": {
+          "kind": "scalar",
+          "required": true
+        },
+        "inference_basis": {
+          "kind": "scalar",
+          "required": true
+        },
+        "participants": {
+          "item_kind": "entity_ref",
+          "kind": "list",
+          "min_items": 1,
+          "relation_role": "PARTICIPANT",
+          "required": true
+        },
+        "related_subject_ids": {
+          "item_kind": "entity_ref",
+          "kind": "list",
+          "min_items": 0,
+          "relation_role": "RELATED_SUBJECT",
+          "required": false
+        },
+        "step": {
+          "kind": "scalar",
+          "required": true
+        }
+      },
+      "knowledge_type": "rtl.ai/1:causal-chain",
+      "source_only_publication": true,
+      "target": "BEHAVIOR:FLOW"
+    },
+    "module-q2.fsm-boundary@2": {
+      "fact_content": {
+        "minimum_quality": "PARTIAL",
+        "required_fields": [
+          "state_names",
+          "reset_path",
+          "scope_limit",
+          "inference_basis"
+        ]
+      },
+      "fact_gap": {
+        "gap_kinds": [
+          "COMPILER_FACT_ABSENT",
+          "SEMANTICS_UNRESOLVED"
+        ],
+        "required": [
+          "missing_fact_content",
+          "affected_fields",
+          "affected_obligations",
+          "direct_source_rationale",
+          "remaining_limitations",
+          "gap_kind"
+        ],
+        "schema": "rtl-analysis-agent/fact-gap-v1",
+        "unresolved_semantics_cannot_close_ready": true
+      },
+      "fields": {
+        "inference_basis": {
+          "kind": "scalar",
+          "required": true
+        },
+        "participants": {
+          "item_kind": "entity_ref",
+          "kind": "list",
+          "min_items": 0,
+          "relation_role": "RELATED_SUBJECT",
+          "required": false
+        },
+        "related_subject_ids": {
+          "item_kind": "entity_ref",
+          "kind": "list",
+          "min_items": 1,
+          "relation_role": "RELATED_SUBJECT",
+          "required": true
+        },
+        "reset_path": {
+          "kind": "scalar",
+          "required": true
+        },
+        "scope_limit": {
+          "kind": "scalar",
+          "required": true
+        },
+        "state_names": {
+          "item_kind": "scalar",
+          "kind": "list",
+          "min_items": 1,
+          "required": true
+        }
+      },
+      "knowledge_type": "rtl.ai/1:state-semantic",
+      "source_only_publication": true,
+      "target": "BEHAVIOR:FSM"
+    },
+    "module-q2.module-function@2": {
+      "fact_content": {
+        "minimum_quality": "PARTIAL",
+        "required_fields": [
+          "function",
+          "condition",
+          "effect",
+          "exceptions",
+          "inference_basis"
+        ]
+      },
+      "fact_gap": {
+        "gap_kinds": [
+          "COMPILER_FACT_ABSENT",
+          "SEMANTICS_UNRESOLVED"
+        ],
+        "required": [
+          "missing_fact_content",
+          "affected_fields",
+          "affected_obligations",
+          "direct_source_rationale",
+          "remaining_limitations",
+          "gap_kind"
+        ],
+        "schema": "rtl-analysis-agent/fact-gap-v1",
+        "unresolved_semantics_cannot_close_ready": true
+      },
+      "fields": {
+        "condition": {
+          "kind": "scalar",
+          "required": true
+        },
+        "effect": {
+          "kind": "scalar",
+          "required": true
+        },
+        "exceptions": {
+          "item_kind": "scalar",
+          "kind": "list",
+          "min_items": 0,
+          "required": true
+        },
+        "function": {
+          "kind": "scalar",
+          "required": true
+        },
+        "inference_basis": {
+          "kind": "scalar",
+          "required": true
+        }
+      },
+      "knowledge_type": "rtl.ai/1:functional-block",
+      "source_only_publication": true,
+      "target": "SUBJECT:rtl.sv/1:module"
+    },
+    "module-q2.module-interface@2": {
+      "fact_content": {
+        "minimum_quality": "PARTIAL",
+        "required_fields": [
+          "group",
+          "why_key",
+          "inference_basis"
+        ]
+      },
+      "fact_gap": {
+        "gap_kinds": [
+          "COMPILER_FACT_ABSENT",
+          "SEMANTICS_UNRESOLVED"
+        ],
+        "required": [
+          "missing_fact_content",
+          "affected_fields",
+          "affected_obligations",
+          "direct_source_rationale",
+          "remaining_limitations",
+          "gap_kind"
+        ],
+        "schema": "rtl-analysis-agent/fact-gap-v1",
+        "unresolved_semantics_cannot_close_ready": true
+      },
+      "fields": {
+        "group": {
+          "kind": "scalar",
+          "required": true
+        },
+        "inference_basis": {
+          "kind": "scalar",
+          "required": true
+        },
+        "signal_refs": {
+          "item_kind": "entity_ref",
+          "kind": "list",
+          "min_items": 1,
+          "required": true
+        },
+        "why_key": {
+          "kind": "scalar",
+          "required": true
+        }
+      },
+      "knowledge_type": "rtl.ai/1:module-role",
+      "source_only_publication": true,
+      "target": "SUBJECT:rtl.sv/1:module"
+    },
+    "module-q2.module-role@2": {
+      "fact_content": {
+        "minimum_quality": "PARTIAL",
+        "required_fields": [
+          "role",
+          "inference_basis"
+        ]
+      },
+      "fact_gap": {
+        "gap_kinds": [
+          "COMPILER_FACT_ABSENT",
+          "SEMANTICS_UNRESOLVED"
+        ],
+        "required": [
+          "missing_fact_content",
+          "affected_fields",
+          "affected_obligations",
+          "direct_source_rationale",
+          "remaining_limitations",
+          "gap_kind"
+        ],
+        "schema": "rtl-analysis-agent/fact-gap-v1",
+        "unresolved_semantics_cannot_close_ready": true
+      },
+      "fields": {
+        "inference_basis": {
+          "kind": "scalar",
+          "required": true
+        },
+        "location": {
+          "kind": "scalar",
+          "required": true
+        },
+        "reuse_basis": {
+          "kind": "object",
+          "required": false
+        },
+        "role": {
+          "kind": "scalar",
+          "required": true
+        }
+      },
+      "knowledge_type": "rtl.ai/1:module-role",
+      "source_only_publication": true,
+      "target": "SUBJECT:rtl.sv/1:module"
+    }
+  },
+  "field_kinds": [
+    "scalar",
+    "enum",
+    "list",
+    "object",
+    "entity_ref"
+  ],
+  "obligations": {
+    "module-q2.flow-step@2": {
+      "claim_shapes": [
+        "module-q2.flow-step@2"
+      ],
+      "ready_requires": "independent review of only asserted Flow step and content Fact support",
+      "required_fields": [
+        "entry",
+        "step",
+        "condition",
+        "effect",
+        "boundary",
+        "inference_basis"
+      ],
+      "source_only_ready": false,
+      "target": "BEHAVIOR:FLOW"
+    },
+    "module-q2.fsm-boundary@2": {
+      "claim_shapes": [
+        "module-q2.fsm-boundary@2"
+      ],
+      "ready_requires": "independent review of only asserted FSM boundary and content Fact support",
+      "required_fields": [
+        "state_names",
+        "reset_path",
+        "scope_limit",
+        "inference_basis"
+      ],
+      "source_only_ready": false,
+      "target": "BEHAVIOR:FSM"
+    },
+    "module-q2.module-function@2": {
+      "claim_shapes": [
+        "module-q2.module-function@2"
+      ],
+      "ready_requires": "independent review of complete bounded function and content Fact support",
+      "required_fields": [
+        "function",
+        "condition",
+        "effect",
+        "exceptions",
+        "inference_basis"
+      ],
+      "source_only_ready": false,
+      "target": "SUBJECT:rtl.sv/1:module"
+    },
+    "module-q2.module-interface@2": {
+      "claim_shapes": [
+        "module-q2.module-interface@2"
+      ],
+      "ready_requires": "independent review of bounded interface and content Fact support",
+      "required_fields": [
+        "group",
+        "why_key",
+        "signal_refs",
+        "inference_basis"
+      ],
+      "source_only_ready": false,
+      "target": "SUBJECT:rtl.sv/1:module"
+    },
+    "module-q2.module-role@2": {
+      "claim_shapes": [
+        "module-q2.module-role@2"
+      ],
+      "ready_requires": "independent review of full bounded role and content Fact support",
+      "required_fields": [
+        "location",
+        "role",
+        "inference_basis"
+      ],
+      "source_only_ready": false,
+      "target": "SUBJECT:rtl.sv/1:module"
+    }
+  },
+  "profile": {
+    "id": "rtl-analysis-agent/module-q2",
+    "version": "2"
+  },
+  "publication": {
+    "global_gates": [
+      "candidate is exact approved v0.2 identity",
+      "scope and build/source revision match",
+      "each factual claim has direct current in-scope Source Evidence with frozen Stage1 file SHA-256 and matching normalized UTF-8 span SHA-256",
+      "VERIFIED review from the controlled independent-review provenance path matches complete input binding",
+      "all present Fact links have reviewed quality EXACT, PARTIAL or SCOPE_ONLY and correspond to actual field content; SCOPE_ONLY never counts as content",
+      "claim and coverage applicability remain nonempty and downward-only",
+      "ownership and each published bounded claim's own semantics are resolved and supported"
+    ],
+    "idempotence": "Same ai_id plus identical complete authoritative claims, support, Source, review, coverage and lifecycle is idempotent; any difference conflicts",
+    "read_consistency": "A later reader takes one SQLite read transaction snapshot, checks every CURRENT coverage member is CURRENT, and projects claims and coverage from that snapshot; no mixed pre/post-commit view",
+    "replacement": "Under write lock, stale every CURRENT coverage referring to a claim made STALE, including coverage outside the incoming overlay; otherwise reject atomically",
+    "review_binding": {
+      "behavior": [
+        "type/key/target",
+        "ownership mode and owner",
+        "applicability",
+        "participants/related subjects when present"
+      ],
+      "candidate": [
+        "schema and contract version",
+        "build/source revision and closure digests",
+        "scope ID and canonical envelope digest"
+      ],
+      "claim_set_digest": "SHA-256 of the canonical JSON array of sorted unique claim member IDs",
+      "claims": [
+        "AI ID and target/key/type/text/shape",
+        "all structured fields/applicability/limitations",
+        "each Fact ID, quality and field-level content relation",
+        "each direct Source Evidence ID/path/span/file SHA-256/normalized span SHA-256/current identity"
+      ],
+      "comparison": "Writer reconstructs each batch from authoritative candidate rows, pinned Profile bytes and complete I; changed batch input or digest rejects before publication.",
+      "contract": [
+        "profile id/version",
+        "vocabulary id/version",
+        "canonical contract-object SHA-256; complete I separately binds the raw Profile file SHA-256"
+      ],
+      "coverage": [
+        "each exact target/obligation/contract identity",
+        "sorted claim members and digest",
+        "applicability/status/limitations/conflicts/unresolved findings"
+      ],
+      "excluded_from_input": [
+        "review artifact ID/status/reviewer identity/signature/path",
+        "review input digest itself",
+        "mutable row lifecycle/validity and receipt"
+      ],
+      "required_top_level": [
+        "schema",
+        "contract",
+        "candidate",
+        "behavior",
+        "claims",
+        "coverage"
+      ],
+      "schema": "rtl-analysis-agent/publication-review-input-v1",
+      "serialization": "UTF-8 JSON, sorted object keys, no insignificant whitespace, ensure_ascii=false; sets represented by sorted unique arrays; ordered semantic lists preserve declared order; SHA-256 over exactly this input object"
+    },
+    "review_trust": "Complete I excludes review and lists all 12 dispositions, batches and Source intake. An independent R cites H(I); Human A cites H(I), H(R), Profile, intake, candidate and batch set. The writer requires an externally pinned H(A), rechecks canonical I/R/A artifacts and source identities, and stores exact review input in provenance Evidence. Names or an overlay VERIFIED flag alone never establish authority. Process trust does not resist an attacker holding the same GitHub write credentials.",
+    "source_only_publication_gate": "Current direct Source, inference basis, applicability, limitations, and independent review permit PUBLISHED without content Fact; source-only READY is denied by all v1 obligations.",
+    "source_only_ready_gate": "All five v1 obligations set source_only_ready=false. Source-only publication remains PARTIAL or GAP.",
+    "writer": "PrototypeStore.publish_reviewed_semantic_overlay through the bounded q2-publish CLI adapter; one approved target batch per transaction."
+  },
+  "schema": "rtl-analysis-agent/module-q2-publication-profile-v1",
+  "scope": {
+    "boundary_policies": [
+      "ROOTED_CONTAINS_CLOSURE",
+      "SOURCE_PATH_SET"
+    ],
+    "dependency_policies": [
+      "REFERENCED_DEFINITIONS_AND_EVIDENCE"
+    ],
+    "membership": "Owner, participants, related subjects, and entity-valued applicability endpoints must be Knowledge Scope members; dependency-only endpoints do not qualify",
+    "modes": [
+      "ACTUAL_INSTANCE_ROOT"
+    ]
+  },
+  "status": "CONTROLLED_REAL_Q2_V1",
+  "vocabulary": {
+    "id": "rtl-analysis-agent/knowledge-contract",
+    "version": "0.1-candidate"
+  }
+}

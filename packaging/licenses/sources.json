@@ -1,0 +1,12 @@
+[
+  {
+    "file": "slang-LICENSE",
+    "url": "https://raw.githubusercontent.com/MikePopoloski/slang/v11.0/LICENSE",
+    "sha256": "0aaa5e55c23baad51bdab241e36220d2fa8df1147ce289a81a58ae4d1c1502fe"
+  },
+  {
+    "file": "Verible-LICENSE",
+    "url": "https://raw.githubusercontent.com/chipsalliance/verible/v0.0-4163-g6cce8f19/LICENSE",
+    "sha256": "2cf0a64c57f5e72fc377e2db383e89658785686a0fcde9c24b0c6a4f405934e1"
+  }
+]

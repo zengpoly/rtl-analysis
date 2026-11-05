@@ -1,0 +1,11 @@
+{
+  "schema": "rtl-project-model-mvp-scope-state/v1",
+  "scope_id": "<scope-id>",
+  "status": "pending",
+  "input_identity": {"source_files": [], "top": "<top>", "config_sha256": "<sha256>", "spec_sha256": "<sha256>"},
+  "producer_status": {},
+  "artifacts": [],
+  "coverage": {},
+  "current_checkpoint": "freeze-input",
+  "next_action": "validate frozen input"
+}

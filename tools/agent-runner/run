@@ -1,0 +1,288 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
+RUNNER="$ROOT/tools/agent-runner"
+IMAGE_A="${AGENT_RUNNER_IMAGE_A:-rtl-analysis-agent-runner:0.3.0-a}"
+IMAGE_B="${AGENT_RUNNER_IMAGE_B:-rtl-analysis-agent-runner:0.3.0-b}"
+IMAGE_C="${AGENT_RUNNER_IMAGE_C:-rtl-analysis-agent-runner:0.3.0-c}"
+TREATMENT=""
+SOURCE=""
+SKILL=""
+PROMPT=""
+BUILD=""
+MODEL=""
+EFFORT=""
+OUTPUT=""
+FORCE=0
+BUILD_IMAGES=0
+MODE=agent
+KNOWLEDGE_MODE=off
+KNOWLEDGE_REQUESTED_MODE=off
+KNOWLEDGE_DELIVERY=""
+KNOWLEDGE_DELIVERY_EXPLICIT=0
+KNOWLEDGE_SKIP_REASON=""
+KNOWLEDGE_CANDIDATE=""
+KNOWLEDGE_TARGET=""
+
+usage() {
+  cat <<'EOF'
+Usage:
+  ./tools/agent-runner/run --build-images
+  ./tools/agent-runner/run --treatment A --source DIR --prompt FILE --build FILE \
+    --model MODEL --effort EFFORT --output DIR [--force]
+  ./tools/agent-runner/run --treatment B --source DIR --prompt FILE --build FILE \
+    --model MODEL --effort EFFORT --output DIR [--force]
+  ./tools/agent-runner/run --treatment C --source DIR --skill DIR --prompt FILE --build FILE \
+    --model MODEL --effort EFFORT --output DIR \
+    [--knowledge on [--knowledge-delivery available|prefetch] --candidate FILE] \
+    [--knowledge-target MODULE] [--force]
+
+Knowledge ON defaults to controller prefetch when --knowledge-target is supplied.
+Without a reliable target it records target-unresolved and uses Source/Tool without
+mounting the candidate. Delivery=available is explicit legacy/diagnostic behavior.
+
+Test-only shell isolation probe: add --probe (model/effort are then optional).
+EOF
+}
+
+die() {
+  printf 'agent-runner: %s\n' "$*" >&2
+  exit 2
+}
+
+while (($#)); do
+  case "$1" in
+    --treatment|--source|--skill|--prompt|--build|--model|--effort|--output|--knowledge|--knowledge-delivery|--candidate|--knowledge-target)
+      (($# >= 2)) || die "$1 requires a value"
+      case "$1" in
+        --treatment) TREATMENT="$2" ;;
+        --source) SOURCE="$2" ;;
+        --skill) SKILL="$2" ;;
+        --prompt) PROMPT="$2" ;;
+        --build) BUILD="$2" ;;
+        --model) MODEL="$2" ;;
+        --effort) EFFORT="$2" ;;
+        --output) OUTPUT="$2" ;;
+        --knowledge) KNOWLEDGE_MODE="$2" ;;
+        --knowledge-delivery) KNOWLEDGE_DELIVERY="$2"; KNOWLEDGE_DELIVERY_EXPLICIT=1 ;;
+        --candidate) KNOWLEDGE_CANDIDATE="$2" ;;
+        --knowledge-target) KNOWLEDGE_TARGET="$2" ;;
+      esac
+      shift 2
+      ;;
+    --force) FORCE=1; shift ;;
+    --build-images) BUILD_IMAGES=1; shift ;;
+    --probe) MODE=probe; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) die "unknown argument: $1" ;;
+  esac
+done
+
+if ((BUILD_IMAGES)); then
+  [[ -z "$TREATMENT$SOURCE$SKILL$PROMPT$BUILD$MODEL$EFFORT$OUTPUT" ]] \
+    || die "--build-images cannot be combined with run arguments"
+  BUILD_ARGS=(--file "$RUNNER/Dockerfile")
+  if [[ -n "${AGENT_RUNNER_PROXY:-}" ]]; then
+    BUILD_ARGS+=(--network host --build-arg "HTTP_PROXY=$AGENT_RUNNER_PROXY" --build-arg "HTTPS_PROXY=$AGENT_RUNNER_PROXY")
+  fi
+  docker build "${BUILD_ARGS[@]}" --target treatment-a --tag "$IMAGE_A" "$ROOT"
+  docker build "${BUILD_ARGS[@]}" --target treatment-b --tag "$IMAGE_B" "$ROOT"
+  exec docker build "${BUILD_ARGS[@]}" --target treatment-c --tag "$IMAGE_C" "$ROOT"
+fi
+
+case "$TREATMENT" in
+  A)
+    [[ -z "$SKILL" ]] || die "treatment A forbids --skill"
+    IMAGE="$IMAGE_A"
+    ;;
+  B)
+    [[ -z "$SKILL" ]] || die "treatment B forbids --skill"
+    IMAGE="$IMAGE_B"
+    ;;
+  C)
+    [[ -n "$SKILL" ]] || die "treatment C requires --skill"
+    IMAGE="$IMAGE_C"
+    ;;
+  *) die "--treatment must be exactly A, B or C" ;;
+esac
+case "$KNOWLEDGE_MODE" in
+  on|off) ;;
+  *) die "--knowledge must be exactly on or off" ;;
+esac
+KNOWLEDGE_REQUESTED_MODE="$KNOWLEDGE_MODE"
+if [[ -z "$KNOWLEDGE_DELIVERY" ]]; then
+  if [[ "$KNOWLEDGE_MODE" == on && -n "$KNOWLEDGE_TARGET" ]]; then
+    KNOWLEDGE_DELIVERY=prefetch
+  elif [[ "$KNOWLEDGE_MODE" == on ]]; then
+    KNOWLEDGE_DELIVERY=off
+    KNOWLEDGE_MODE=off
+    KNOWLEDGE_SKIP_REASON=target-unresolved
+  else
+    KNOWLEDGE_DELIVERY=off
+  fi
+fi
+case "$KNOWLEDGE_DELIVERY" in
+  available)
+    [[ "$KNOWLEDGE_REQUESTED_MODE" == on ]] || die "available delivery requires --knowledge on"
+    [[ "$KNOWLEDGE_DELIVERY_EXPLICIT" == 1 ]] || die "available delivery must be selected explicitly"
+    ;;
+  prefetch)
+    [[ "$KNOWLEDGE_REQUESTED_MODE" == on ]] || die "prefetch delivery requires --knowledge on"
+    [[ -n "$KNOWLEDGE_TARGET" ]] || die "prefetch delivery requires --knowledge-target MODULE"
+    ;;
+  off)
+    [[ "$KNOWLEDGE_MODE" == off ]] || die "off delivery requires effective knowledge OFF"
+    ;;
+  *) die "--knowledge-delivery must be exactly available, prefetch or off" ;;
+esac
+if [[ "$TREATMENT" == A && "$KNOWLEDGE_REQUESTED_MODE" != off ]]; then
+  die "treatment A cannot enable module knowledge"
+fi
+if [[ "$KNOWLEDGE_REQUESTED_MODE" == on ]]; then
+  [[ "$TREATMENT" == B || "$TREATMENT" == C ]] || die "knowledge ON requires treatment B or C"
+fi
+if [[ "$KNOWLEDGE_MODE" == on ]]; then
+  [[ -f "$KNOWLEDGE_CANDIDATE" ]] || die "knowledge ON requires --candidate FILE"
+  KNOWLEDGE_CANDIDATE="$(realpath -e -- "$KNOWLEDGE_CANDIDATE")"
+elif [[ "$KNOWLEDGE_REQUESTED_MODE" == off && -n "$KNOWLEDGE_CANDIDATE" ]]; then
+  die "knowledge OFF forbids --candidate"
+fi
+[[ -n "$SOURCE" && -n "$PROMPT" && -n "$BUILD" && -n "$OUTPUT" ]] \
+  || { usage >&2; die "treatment, source, prompt, build and output are required"; }
+if [[ "$MODE" == agent ]]; then
+  [[ -n "$MODEL" && -n "$EFFORT" ]] || die "model and effort are required"
+fi
+case "$EFFORT" in
+  ""|none|minimal|low|medium|high|xhigh|max) ;;
+  *) die "effort must be one of none|minimal|low|medium|high|xhigh|max" ;;
+esac
+
+[[ -d "$SOURCE" ]] || die "source is not a directory: $SOURCE"
+[[ -f "$PROMPT" ]] || die "prompt is not a file: $PROMPT"
+[[ -f "$BUILD" ]] || die "build is not a file: $BUILD"
+SOURCE="$(realpath -e -- "$SOURCE")"
+if [[ "$TREATMENT" == C ]]; then
+  [[ -d "$SKILL" ]] || die "skill is not a directory: $SKILL"
+  SKILL="$(realpath -e -- "$SKILL")"
+  [[ -f "$SKILL/SKILL.md" ]] || die "skill directory has no SKILL.md: $SKILL"
+fi
+PROMPT="$(realpath -e -- "$PROMPT")"
+BUILD="$(realpath -e -- "$BUILD")"
+OUTPUT="$(realpath -m -- "$OUTPUT")"
+[[ -f "$PROMPT" && -s "$PROMPT" ]] || die "prompt is not a non-empty file: $PROMPT"
+[[ -f "$BUILD" && -s "$BUILD" ]] || die "build is not a non-empty file: $BUILD"
+jq -e '.schema == "rtl-analysis-agent/runtime-query-build-v1"' "$BUILD" >/dev/null \
+  || die "build is not a runtime-query-build-v1 JSON object"
+
+REPO_REAL="$(realpath -e -- "$ROOT")"
+USER_HOME_REAL="$(realpath -e -- "${HOME:?HOME is required}")"
+case "$OUTPUT" in
+  /|/bin|/boot|/dev|/etc|/home|/lib|/lib64|/opt|/proc|/root|/run|/sbin|/srv|/sys|/usr|/var|"$USER_HOME_REAL"|"$REPO_REAL")
+    die "refusing broad output path: $OUTPUT"
+    ;;
+esac
+if [[ -d "$OUTPUT" ]] && [[ -n "$(find "$OUTPUT" -mindepth 1 -maxdepth 1 -print -quit)" ]]; then
+  ((FORCE)) || die "output already exists and is not empty; use --force: $OUTPUT"
+  jq -e '.schema == "rtl-analysis-agent/agent-runner-status-v2" or .schema == "rtl-analysis-agent/agent-runner-status-v1"' "$OUTPUT/status.json" >/dev/null 2>&1 \
+    || die "--force only replaces an existing agent-runner output directory: $OUTPUT"
+  rm -rf -- "$OUTPUT"
+elif [[ -e "$OUTPUT" && ! -d "$OUTPUT" ]]; then
+  die "output exists and is not a directory: $OUTPUT"
+fi
+mkdir -p -- "$OUTPUT"
+chmod 0700 "$OUTPUT"
+
+docker image inspect "$IMAGE" >/dev/null 2>&1 \
+  || die "Docker image '$IMAGE' is missing; build both with: ./tools/agent-runner/run --build-images"
+
+PROJECT="$(basename "$SOURCE")"
+REVISION="unversioned"
+if git -C "$SOURCE" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  REVISION="$(git -C "$SOURCE" rev-parse HEAD)"
+fi
+TASK_TMP="$(mktemp -d -t agent-runner.XXXXXXXX)"
+PROXY_PID=""
+cleanup() {
+  if [[ -n "$PROXY_PID" ]]; then
+    kill "$PROXY_PID" 2>/dev/null || true
+    wait "$PROXY_PID" 2>/dev/null || true
+  fi
+  rm -rf -- "$TASK_TMP"
+}
+trap cleanup EXIT INT TERM
+mkdir -m 0700 "$TASK_TMP/proxy"
+mkdir -m 0700 "$TASK_TMP/source"
+tar --exclude='./.git' -C "$SOURCE" -cf - . | tar -C "$TASK_TMP/source" -xf -
+SOURCE_SNAPSHOT="$TASK_TMP/source"
+
+DOCKER_ARGS=(
+  run --rm --read-only --network none --cap-drop ALL
+  --security-opt no-new-privileges
+  --user "$(id -u):$(id -g)"
+  --tmpfs "/workspace/scratch:rw,nosuid,nodev,uid=$(id -u),gid=$(id -g),mode=0700"
+  --tmpfs "/tmp:rw,nosuid,nodev,uid=$(id -u),gid=$(id -g),mode=0700"
+  --tmpfs "/codex-home:rw,nosuid,nodev,uid=$(id -u),gid=$(id -g),mode=0700"
+  --mount "type=bind,src=$SOURCE_SNAPSHOT,dst=/workspace/source,readonly"
+  --mount "type=bind,src=$PROMPT,dst=/workspace/input/question.md,readonly"
+  --mount "type=bind,src=$BUILD,dst=/workspace/input/build.json,readonly"
+  --mount "type=bind,src=$OUTPUT,dst=/workspace/output"
+  --env "AGENT_RUNNER_MODE=$MODE"
+  --env "AGENT_RUNNER_TREATMENT=$TREATMENT"
+  --env "AGENT_RUNNER_MODEL=$MODEL"
+  --env "AGENT_RUNNER_EFFORT=$EFFORT"
+  --env "AGENT_RUNNER_PROJECT=$PROJECT"
+  --env "AGENT_RUNNER_REVISION=$REVISION"
+  --env "AGENT_RUNNER_KNOWLEDGE_REQUESTED_MODE=$KNOWLEDGE_REQUESTED_MODE"
+  --env "AGENT_RUNNER_KNOWLEDGE_MODE=$KNOWLEDGE_MODE"
+  --env "AGENT_RUNNER_KNOWLEDGE_DELIVERY=$KNOWLEDGE_DELIVERY"
+  --env "AGENT_RUNNER_KNOWLEDGE_SKIP_REASON=$KNOWLEDGE_SKIP_REASON"
+  --env "AGENT_RUNNER_KNOWLEDGE_PROBE_TARGET=$KNOWLEDGE_TARGET"
+)
+
+if [[ "$TREATMENT" == C ]]; then
+  DOCKER_ARGS+=(--mount "type=bind,src=$SKILL,dst=/workspace/skills,readonly")
+fi
+
+if [[ "$KNOWLEDGE_MODE" == on ]]; then
+  DOCKER_ARGS+=(--mount "type=bind,src=$KNOWLEDGE_CANDIDATE,dst=/workspace/knowledge/candidate.sqlite,readonly")
+fi
+
+if [[ "$MODE" == agent ]]; then
+  CODEX_BASE="${CODEX_HOME:-$HOME/.codex}"
+  AUTH_SOURCE="${AGENT_RUNNER_AUTH_FILE:-$CODEX_BASE/auth.json}"
+  [[ -f "$AUTH_SOURCE" ]] || die "Codex auth file is missing: $AUTH_SOURCE"
+  AUTH_SOURCE="$(realpath -e -- "$AUTH_SOURCE")"
+  AUTH_MODE="$(stat -c '%a' "$AUTH_SOURCE")"
+  (( (8#$AUTH_MODE & 077) == 0 )) || die "Codex auth file must not be group/world accessible"
+  install -m 0600 "$AUTH_SOURCE" "$TASK_TMP/auth.json"
+
+  PROXY_URL="${AGENT_RUNNER_PROXY:-${HTTPS_PROXY:-${https_proxy:-${HTTP_PROXY:-${http_proxy:-http://127.0.0.1:1081}}}}}"
+  python3 "$RUNNER/proxy_bridge.py" host \
+    --socket "$TASK_TMP/proxy/proxy.sock" --proxy "$PROXY_URL" \
+    >"$TASK_TMP/proxy.log" 2>&1 &
+  PROXY_PID=$!
+  for _ in {1..100}; do
+    [[ -S "$TASK_TMP/proxy/proxy.sock" ]] && break
+    kill -0 "$PROXY_PID" 2>/dev/null || {
+      sed -n '1,80p' "$TASK_TMP/proxy.log" >&2
+      die "host proxy bridge failed to start"
+    }
+    sleep 0.05
+  done
+  [[ -S "$TASK_TMP/proxy/proxy.sock" ]] || die "host proxy bridge did not become ready"
+  DOCKER_ARGS+=(
+    --mount "type=bind,src=$TASK_TMP/auth.json,dst=/run/codex-auth.json,readonly"
+    --mount "type=bind,src=$TASK_TMP/proxy,dst=/run/agent-proxy"
+  )
+else
+  SENTINEL="${AGENT_RUNNER_SENTINEL_PATH:-/host-author-repository-sentinel}"
+  DOCKER_ARGS+=(--env "AGENT_RUNNER_SENTINEL_PATH=$SENTINEL")
+fi
+
+set +e
+docker "${DOCKER_ARGS[@]}" "$IMAGE"
+RESULT=$?
+set -e
+printf 'Agent runner output: %s\n' "$OUTPUT"
+exit "$RESULT"

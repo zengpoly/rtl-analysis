@@ -1,0 +1,16 @@
+{
+  "schema": "rtl-analysis-agent/ai-knowledge-contract-v01-candidate",
+  "version": "0.1-candidate",
+  "entries": [
+    {"name":"MODULE_ROLE","id":"rtl.ai/1:module-role","category":"analysis-core","maturity":"supported","subject_kinds":["rtl.sv/1:module"],"producers":["agent"],"requires_fact_support":true,"evidence_required":true,"query_roles":["semantics"]},
+    {"name":"SIGNAL_ROLE","id":"rtl.ai/1:signal-role","category":"analysis-core","maturity":"supported","subject_kinds":["rtl.sv/1:signal","rtl.temporal/1:register","rtl.sv/1:port"],"producers":["agent"],"requires_fact_support":true,"evidence_required":true,"query_roles":["semantics","data-flow"]},
+    {"name":"FUNCTIONAL_BLOCK","id":"rtl.ai/1:functional-block","category":"analysis-core","maturity":"experimental","subject_kinds":["rtl.sv/1:module","rtl.sv/1:instance"],"producers":["agent"],"requires_fact_support":true,"evidence_required":true,"query_roles":["semantics","structure"]},
+    {"name":"EVENT_EFFECT","id":"rtl.ai/1:event-effect","category":"analysis-core","maturity":"supported","subject_kinds":["rtl.sv/1:signal","rtl.temporal/1:register","rtl.sv/1:process"],"producers":["agent"],"requires_fact_support":true,"evidence_required":true,"query_roles":["semantics","control"]},
+    {"name":"CAUSAL_CHAIN","id":"rtl.ai/1:causal-chain","category":"analysis-core","maturity":"supported","subject_kinds":["rtl.sv/1:signal","rtl.temporal/1:register","rtl.sv/1:module"],"producers":["agent"],"requires_fact_support":true,"evidence_required":true,"query_roles":["semantics","data-flow","control"]},
+    {"name":"CONTROL_PRIORITY_SEMANTIC","id":"rtl.ai/1:control-priority-semantic","category":"analysis-core","maturity":"experimental","subject_kinds":["rtl.sv/1:condition","rtl.sv/1:assignment","rtl.sv/1:process"],"producers":["agent"],"requires_fact_support":true,"evidence_required":true,"query_roles":["semantics","control"]},
+    {"name":"STATE_SEMANTIC","id":"rtl.ai/1:state-semantic","category":"analysis-core","maturity":"experimental","subject_kinds":["rtl.temporal/1:register","rtl.fsm/1:fsm","rtl.fsm/1:state"],"producers":["agent"],"requires_fact_support":true,"evidence_required":true,"query_roles":["semantics","state"]},
+    {"name":"PIPELINE_SEMANTIC","id":"rtl.ai/1:pipeline-semantic","category":"analysis-core","maturity":"experimental","subject_kinds":["rtl.sv/1:module","rtl.temporal/1:register","rtl.sv/1:signal"],"producers":["agent"],"requires_fact_support":true,"evidence_required":true,"query_roles":["semantics","state"]},
+    {"name":"SPECULATION_SEMANTIC","id":"rtl.ai/1:speculation-semantic","category":"analysis-core","maturity":"experimental","subject_kinds":["rtl.sv/1:module","rtl.sv/1:signal","rtl.temporal/1:register"],"producers":["agent"],"requires_fact_support":true,"evidence_required":true,"query_roles":["semantics","control"]},
+    {"name":"RECOVERY_SEMANTIC","id":"rtl.ai/1:recovery-semantic","category":"analysis-core","maturity":"experimental","subject_kinds":["rtl.sv/1:module","rtl.sv/1:signal","rtl.temporal/1:register"],"producers":["agent"],"requires_fact_support":true,"evidence_required":true,"query_roles":["semantics","control"]}
+  ]
+}

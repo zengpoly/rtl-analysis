@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ page.qualified_name }} · 源码文件{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ asset_href('source.css') }}">{% endblock %}
+{% block content %}
+{% set object_kind_label = "SOURCE_FILE" %}{% include "components/object-header.html" %}
+<section class="panel provenance provenance-source" data-provenance="source-evidence"><span class="provenance-label">RTL 源码 / 源码证据</span><h2>源码身份</h2><dl class="grid-dl"><dt>状态</dt><dd>{{ page.status }}</dd><dt>预期 SHA-256</dt><dd><code>{{ page.expected_sha256 }}</code></dd><dt>当前 SHA-256</dt><dd><code>{{ page.actual_sha256 or 'NOT_AVAILABLE' }}</code></dd><dt>构建</dt><dd><code>{{ scope.build_identity.build_sha256 }}</code></dd></dl></section>
+<section class="source-panel provenance provenance-source" data-provenance="source-evidence" aria-label="完整源码"><span class="provenance-label source-code-label">RTL 源码 / 源码证据</span><ol class="source-lines">{% for line in lines %}<li id="L{{ loop.index }}"><a class="line-number" href="#L{{ loop.index }}">{{ loop.index }}</a><code>{{ line }}</code></li>{% endfor %}</ol></section>
+{% endblock %}
+{% block scripts %}<script src="{{ asset_href('source-span.js') }}"></script>{% endblock %}

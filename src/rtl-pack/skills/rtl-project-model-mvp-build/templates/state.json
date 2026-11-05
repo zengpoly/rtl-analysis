@@ -1,0 +1,17 @@
+{
+  "schema": "rtl-project-model-mvp-build-state/v1",
+  "task_id": "<task-id>",
+  "status": "pending",
+  "goal": {"mode": "bounded-mvp", "summary": "<goal>", "requested_scope": ["<scope-id>"]},
+  "identity": {
+    "project": "<project>", "source_revision": "<revision-or-unversioned>",
+    "config_sha256": "<sha256>", "spec_sha256": "<sha256>",
+    "domain_pack_version": "<version>", "tool_versions": {}, "schema_version": "rtlpm-v2"
+  },
+  "model": {"path": "analysis/model/rtl-project-model.sqlite", "model_id": null, "content_hash": null},
+  "progress": {"total_scopes": 0, "completed_scopes": 0, "failed_scopes": 0, "pending_scopes": 0},
+  "scopes": [],
+  "current_scope_id": null,
+  "current_checkpoint": "plan-scope",
+  "next_action": "freeze MVP scope"
+}

@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+git -C "$ROOT" diff --check
+
+required=(
+  README.md
+  packaging/build-offline
+  packaging/runtime-lock.json
+  packaging/install
+  packaging/rtl
+  packaging/README.md
+  quickstart.md
+  projects/example/source/example.sv
+  projects/example/rtl-project.json
+  projects/example/runtime-query-build.json
+  AGENTS.md
+  CLAUDE.md
+  src/rtl-pack/config/domain-pack.json
+  src/rtl-pack/config/targets.json
+  src/rtl-pack/config/toolchain.json
+  src/rtl-pack/docs/domain-workspace.md
+  src/rtl-pack/docs/mvp-toolchain.md
+  src/rtl-pack/docs/rtl-analysis-scenarios-and-tools.md
+  src/rtl-pack/bin/rtl
+  src/rtl-pack/lib/rtl_analysis_cli.py
+  src/rtl-pack/lib/rtl_query_runtime.py
+  src/rtl-pack/scripts/install-tools
+  src/rtl-pack/skills/rtl-project-model-mvp-build/SKILL.md
+  src/rtl-pack/skills/rtl-project-model-query/SKILL.md
+  src/rtl-pack/skills/rtl-query/SKILL.md
+  src/rtl-pack/skills/rtl-question-factory/SKILL.md
+  src/rtl-pack/skills/rtl-project-model-mvp-build/internal-skills/freeze-input/SKILL.md
+  src/rtl-pack/skills/rtl-project-model-mvp-build/templates/state.json
+  src/rtl-pack/skills/rtl-project-model-query/internal-skills/route-question/SKILL.md
+  src/rtl-pack/templates/workspace/README.md
+  tools/agent-runner/README.md
+  tools/agent-runner/Dockerfile
+  tools/agent-runner/run
+  tools/agent-runner/entrypoint.sh
+  tools/agent-runner/runtime_server.py
+  tools/agent-runner/proxy_bridge.py
+  tools/agent-runner/runner_entry.py
+  tools/agent-runner/bin/rtlq
+  tools/agent-runner/tests/smoke.sh
+  tools/agent-runner/tests/smoke-question.md
+)
+
+for path in "${required[@]}"; do
+  if [[ ! -f "$ROOT/$path" ]]; then
+    printf 'check: FAIL missing %s\n' "$path" >&2
+    exit 1
+  fi
+done
+
+executables=(src/rtl-pack/bin/rtl src/rtl-pack/scripts/install-tools tools/agent-runner/run tools/agent-runner/entrypoint.sh tools/agent-runner/bin/rtlq tools/agent-runner/tests/smoke.sh packaging/build-offline packaging/install packaging/rtl)
+for path in "${executables[@]}"; do
+  if [[ ! -x "$ROOT/$path" ]]; then
+    printf 'check: FAIL command is not executable: %s\n' "$path" >&2
+    exit 1
+  fi
+done
+
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s "$ROOT/tests" -p 'test_*.py'
+
+grep -q '^name: rtl-project-model-mvp-build$' "$ROOT/src/rtl-pack/skills/rtl-project-model-mvp-build/SKILL.md"
+grep -q '^name: rtl-project-model-query$' "$ROOT/src/rtl-pack/skills/rtl-project-model-query/SKILL.md"
+grep -q '^name: rtl-query$' "$ROOT/src/rtl-pack/skills/rtl-query/SKILL.md"
+grep -q '^name: rtl-question-factory$' "$ROOT/src/rtl-pack/skills/rtl-question-factory/SKILL.md"
+grep -q '^  visibility: internal$' "$ROOT/src/rtl-pack/skills/rtl-project-model-mvp-build/internal-skills/freeze-input/SKILL.md"
+grep -q '^  visibility: internal$' "$ROOT/src/rtl-pack/skills/rtl-project-model-query/internal-skills/route-question/SKILL.md"
+
+printf 'RTL product check: PASS\n'

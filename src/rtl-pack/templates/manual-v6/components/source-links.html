@@ -1,0 +1,13 @@
+<section class="panel provenance provenance-source" data-provenance="source-evidence">
+  <span class="provenance-label">RTL 源码 / 源码证据</span>
+  <h2>源码证据</h2>
+  <p class="provenance-grounding">源码位置和哈希为上方编译器确认的事实提供依据。</p>
+  {% if page.preview.evidence %}
+  <ul class="evidence-list">
+    {% for link in page.preview.evidence %}
+    <li>{% if link.source_entity_id in page_map %}<a href="{{ href(page_map[link.source_entity_id], link.fragment) }}">{{ link.path }}{% if link.fragment %}:{{ link.fragment }}{% endif %}</a>{% else %}<code>{{ link.path }}{% if link.fragment %}:{{ link.fragment }}{% endif %}</code>{% endif %} <span class="badge">{{ link.status }}</span>{% if link.sha256 %} <span class="identity">SHA-256 {{ link.sha256[:12] }}…</span>{% endif %}</li>
+    {% endfor %}
+  </ul>
+  {% if page.source_links|length > page.preview.evidence|length %}<p class="more">当前展示 {{ page.preview.evidence|length }} / {{ page.source_links|length }} 处证据定位。</p>{% endif %}
+  {% else %}<p class="muted">NOT_AVAILABLE</p>{% endif %}
+</section>

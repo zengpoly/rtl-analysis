@@ -1,0 +1,8 @@
+{
+  "schema": "rtl-analysis-agent/project-v1",
+  "name": "demo",
+  "source": "source",
+  "analysis": "analysis",
+  "revision": null,
+  "entry": "rtl/top.sv"
+}

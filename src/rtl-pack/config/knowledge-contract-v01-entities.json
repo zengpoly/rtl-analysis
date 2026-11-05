@@ -1,0 +1,24 @@
+{
+  "schema": "rtl-analysis-agent/entity-contract-v01-candidate",
+  "version": "0.1-candidate",
+  "entries": [
+    {"name":"MODULE","id":"rtl.sv/1:module","category":"analysis-core","maturity":"supported","evidence":"source","producers":["slang"],"query_roles":["structure"]},
+    {"name":"INSTANCE","id":"rtl.sv/1:instance","category":"analysis-core","maturity":"supported","evidence":"source","producers":["slang"],"query_roles":["structure","connectivity"]},
+    {"name":"PORT","id":"rtl.sv/1:port","category":"analysis-core","maturity":"supported","evidence":"source","producers":["slang"],"query_roles":["structure","connectivity"]},
+    {"name":"SIGNAL","id":"rtl.sv/1:signal","category":"analysis-core","maturity":"supported","evidence":"source","producers":["slang"],"query_roles":["data-flow","control","clock-reset"]},
+    {"name":"REGISTER","id":"rtl.temporal/1:register","category":"analysis-core","maturity":"experimental","evidence":"source","producers":["slang"],"query_roles":["state","clock-reset"]},
+    {"name":"PARAMETER","id":"rtl.sv/1:parameter","category":"analysis-core","maturity":"supported","evidence":"source","producers":["slang"],"query_roles":["structure"]},
+    {"name":"PROCESS","id":"rtl.sv/1:process","category":"analysis-core","maturity":"supported","evidence":"source","producers":["slang"],"query_roles":["control","clock-reset"]},
+    {"name":"ASSIGNMENT","id":"rtl.sv/1:assignment","category":"analysis-core","maturity":"supported","evidence":"source","producers":["slang"],"query_roles":["data-flow","control"]},
+    {"name":"EXPRESSION","id":"rtl.sv/1:expression","category":"analysis-core","maturity":"supported","evidence":"source","producers":["slang"],"query_roles":["data-flow"]},
+    {"name":"CONDITION","id":"rtl.sv/1:condition","category":"analysis-core","maturity":"experimental","evidence":"source","producers":["slang"],"query_roles":["control"]},
+    {"name":"MEMORY","id":"rtl.temporal/1:memory","category":"analysis-core","maturity":"unsupported","evidence":"source","producers":[],"query_roles":["state"]},
+    {"name":"FSM","id":"rtl.fsm/1:fsm","category":"analysis-core","maturity":"unsupported","evidence":"source","producers":[],"query_roles":["state"]},
+    {"name":"STATE","id":"rtl.fsm/1:state","category":"analysis-core","maturity":"unsupported","evidence":"source","producers":[],"query_roles":["state"]},
+    {"name":"TRANSITION","id":"rtl.fsm/1:transition","category":"analysis-core","maturity":"unsupported","evidence":"source","producers":[],"query_roles":["state"]},
+    {"name":"UNRESOLVED","id":"rtl.boundary/1:unresolved","category":"analysis-core","maturity":"supported","evidence":"source-or-provenance","producers":["slang","build-spec"],"query_roles":["boundary"]},
+    {"name":"PROJECT","id":"rtl.project/1:project","category":"infrastructure","maturity":"supported","evidence":"provenance","producers":["build-spec"],"query_roles":["provenance"],"extension_rationale":{"real_scenario":"The frozen 18-file IFU scope needs one owning analysis object.","expression_gap":"A module cannot represent the whole build scope or candidate.","producer":"Create one row directly from the frozen build spec.","query_consumer":"Scope and boundary context queries."}},
+    {"name":"CONFIGURATION","id":"rtl.config/1:configuration","category":"infrastructure","maturity":"supported","evidence":"provenance","producers":["build-spec"],"query_roles":["provenance"],"extension_rationale":{"real_scenario":"Top, defines, includes and file list determine interpretation of the 18 files.","expression_gap":"A parameter cannot represent the complete build configuration.","producer":"Create one row from validated build input.","query_consumer":"Build provenance and boundary queries."}},
+    {"name":"SOURCE_FILE","id":"rtl.source/1:file","category":"infrastructure","maturity":"supported","evidence":"provenance","producers":["build-spec"],"query_roles":["provenance","source"],"extension_rationale":{"real_scenario":"Every source-backed fact belongs to one of the frozen files.","expression_gap":"Evidence locators alone do not support file-level scope lookup.","producer":"Create one row per validated file-list item.","query_consumer":"Source coverage and file context queries."}}
+  ]
+}

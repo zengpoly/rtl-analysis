@@ -1,0 +1,15 @@
+<p class="formal-q2-status">已审核：{{ item.review.status }} · {{ item.closure_status }} · {{ item.support_label }}</p>
+<p><strong>推断依据：</strong>{{ item.inference_basis }}</p>
+{% for coverage in item.coverage %}
+<p class="formal-q2-limit" data-coverage-id="{{ coverage.coverage_id }}"><strong>适用实例：</strong>{% for actual in coverage.applicability.instance_id %}{{ item.actual_names[actual] }}{% if not loop.last %}、{% endif %}{% endfor %} · <strong>覆盖：</strong>{{ coverage.closure_status }}</p>
+{% for limit in coverage.limitations %}<p class="formal-q2-limit"><strong>未评估边界：</strong>{{ limit }}</p>{% endfor %}
+{% for conflict in coverage.conflicts %}<p class="formal-q2-limit"><strong>冲突：</strong>{{ conflict }}</p>{% endfor %}
+{% for unresolved in coverage.unresolved %}<p class="formal-q2-limit"><strong>未解决：</strong>{{ unresolved }}</p>{% endfor %}
+{% endfor %}
+<details class="formal-q2-audit"><summary>查看审核与证据详情</summary>
+  <p>Claim {{ item.ai_id }} · Review {{ item.review.reviewer }} · input {{ item.review.input_sha256 }} · artifact {{ item.review.artifact_sha256 }}</p>
+  <p>Exact applicability: {{ item.applicability.instance_id|join(', ') }}</p>
+  {% if item.fact_support %}<ul>{% for fact in item.fact_support %}<li>Fact {{ fact.fact_id }} · {{ fact.support_quality }} · fields_proven={{ fact.fields_proven|join(', ') if fact.fields_proven else '无' }}</li>{% endfor %}</ul>{% else %}<p>无 content-level Fact；本条以已审核的 current Source 与明确限制支持。</p>{% endif %}
+  <ul>{% for source in item.source_evidence %}<li>Source {% if source.source_entity_id in page_map %}<a href="{{ href(page_map[source.source_entity_id], source.anchor) }}">{{ source.locator }}:{{ source.fragment }}</a>{% else %}{{ source.locator }}:{{ source.fragment }}{% endif %} · file={{ source.attrs.file_sha256 }} · span={{ source.attrs.sha256 }}</li>{% endfor %}</ul>
+  {% for gap in item.limitations %}<p>Fact Gap：{{ gap.gap_kind }}；{{ gap.remaining_limitations|join('；') }}</p>{% endfor %}
+</details>

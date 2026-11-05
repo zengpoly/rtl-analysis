@@ -1,0 +1,286 @@
+{
+  "schema": "rtl-analysis-agent/knowledge-registry-v1",
+  "version": 1,
+  "dimensions": [
+    {
+      "id": "configuration/elaboration",
+      "label": "Configuration / Elaboration",
+      "description": "Source selection, parameters, macros, top selection, and elaborated design identity.",
+      "version": 1
+    },
+    {
+      "id": "hierarchy",
+      "label": "Hierarchy / Structure",
+      "description": "Modules, instances, containment, ports, and structural ownership.",
+      "version": 1
+    },
+    {
+      "id": "connectivity",
+      "label": "Connectivity",
+      "description": "Port binding, signal drivers and loads, and bit-level connection facts.",
+      "version": 1
+    },
+    {
+      "id": "behavior/causality",
+      "label": "Behavior / Causality",
+      "description": "Data, control, guard, and priority dependencies in RTL logic.",
+      "version": 1
+    },
+    {
+      "id": "temporal/ordering",
+      "label": "State / Temporal / Ordering",
+      "description": "Registers, state machines, storage, pipeline order, hold, flush, and provable latency.",
+      "version": 1
+    },
+    {
+      "id": "clock/reset",
+      "label": "Clock / Reset",
+      "description": "Register clocks and resets plus derived clock and reset lineage.",
+      "version": 1
+    },
+    {
+      "id": "engineering-semantic",
+      "label": "Engineering Semantic",
+      "description": "Evidence-linked engineering meaning for modules, signals, and subsystems.",
+      "version": 1
+    }
+  ],
+  "predicates": [
+    {
+      "id": "rtl.config/1:has-configuration",
+      "dimension": "configuration/elaboration",
+      "description": "Associates an RTL project with one elaboration configuration.",
+      "version": 1
+    },
+    {
+      "id": "rtl.config/1:uses-source",
+      "dimension": "configuration/elaboration",
+      "description": "Declares a source file used by an elaboration configuration.",
+      "version": 1
+    },
+    {
+      "id": "rtl.config/1:has-parameter",
+      "dimension": "configuration/elaboration",
+      "description": "Associates an elaborated module with one parameter value.",
+      "version": 1
+    },
+    {
+      "id": "rtl.config/1:top",
+      "dimension": "configuration/elaboration",
+      "description": "Selects the top module of an elaboration configuration.",
+      "version": 1
+    },
+    {
+      "id": "rtl.hierarchy/1:contains",
+      "dimension": "hierarchy",
+      "description": "Expresses structural containment.",
+      "version": 1
+    },
+    {
+      "id": "rtl.hierarchy/1:instance-of",
+      "dimension": "hierarchy",
+      "description": "Links an instance to its module definition.",
+      "version": 1
+    },
+    {
+      "id": "rtl.hierarchy/1:declares-port",
+      "dimension": "hierarchy",
+      "description": "Links a module or instance to a declared port.",
+      "version": 1
+    },
+    {
+      "id": "rtl.connectivity/1:binds-to",
+      "dimension": "connectivity",
+      "description": "Links a port endpoint to the connected signal endpoint.",
+      "version": 1
+    },
+    {
+      "id": "rtl.connectivity/1:drives",
+      "dimension": "connectivity",
+      "description": "Links a driver endpoint to its driven endpoint.",
+      "version": 1
+    },
+    {
+      "id": "rtl.connectivity/1:loads",
+      "dimension": "connectivity",
+      "description": "Links a load endpoint to the endpoint it reads.",
+      "version": 1
+    },
+    {
+      "id": "rtl.behavior/1:data-depends-on",
+      "dimension": "behavior/causality",
+      "description": "Expresses a static data dependency.",
+      "version": 1
+    },
+    {
+      "id": "rtl.behavior/1:control-depends-on",
+      "dimension": "behavior/causality",
+      "description": "Expresses a static control dependency.",
+      "version": 1
+    },
+    {
+      "id": "rtl.fsm/1:controlled-by",
+      "dimension": "behavior/causality",
+      "description": "Links a state machine to a controlling input.",
+      "version": 1
+    },
+    {
+      "id": "rtl.temporal/1:next-cycle-from",
+      "dimension": "temporal/ordering",
+      "description": "Expresses a register value sampled for the next active cycle.",
+      "version": 1
+    },
+    {
+      "id": "rtl.fsm/1:has-state",
+      "dimension": "temporal/ordering",
+      "description": "Associates a state machine with one state.",
+      "version": 1
+    },
+    {
+      "id": "rtl.fsm/1:transitions-to",
+      "dimension": "temporal/ordering",
+      "description": "Links a state or transition node to its next state.",
+      "version": 1
+    },
+    {
+      "id": "rtl.clock-reset/1:clocked-by",
+      "dimension": "clock/reset",
+      "description": "Links a register to its clock.",
+      "version": 1
+    },
+    {
+      "id": "rtl.clock-reset/1:reset-by",
+      "dimension": "clock/reset",
+      "description": "Links a register to its reset.",
+      "version": 1
+    },
+    {
+      "id": "rtl.clock-reset/1:derived-from",
+      "dimension": "clock/reset",
+      "description": "Expresses derived clock or reset lineage.",
+      "version": 1
+    },
+    {
+      "id": "rtl.semantic/1:implements",
+      "dimension": "engineering-semantic",
+      "description": "Links an RTL entity to an evidence-backed engineering concept.",
+      "version": 1
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "rtl.configuration.source-set.v1",
+      "dimension": "configuration/elaboration",
+      "description": "Identifies the source set used for a model.",
+      "version": 1
+    },
+    {
+      "id": "rtl.configuration.elaboration.v1",
+      "dimension": "configuration/elaboration",
+      "description": "Identifies the selected and elaborated design configuration.",
+      "version": 1
+    },
+    {
+      "id": "rtl.hierarchy.modules.v1",
+      "dimension": "hierarchy",
+      "description": "Finds module definitions in the selected design.",
+      "version": 1
+    },
+    {
+      "id": "rtl.hierarchy.instances.v1",
+      "dimension": "hierarchy",
+      "description": "Finds instance structure and module ownership.",
+      "version": 1
+    },
+    {
+      "id": "rtl.connectivity.port-binding.v1",
+      "dimension": "connectivity",
+      "description": "Finds binding between ports and signals.",
+      "version": 1
+    },
+    {
+      "id": "rtl.connectivity.driver-load.v1",
+      "dimension": "connectivity",
+      "description": "Finds static signal drivers and loads.",
+      "version": 1
+    },
+    {
+      "id": "rtl.connectivity.bit-range.v1",
+      "dimension": "connectivity",
+      "description": "Preserves bit width and bit selection facts.",
+      "version": 1
+    },
+    {
+      "id": "rtl.behavior.data-dependency.v1",
+      "dimension": "behavior/causality",
+      "description": "Finds static data dependencies.",
+      "version": 1
+    },
+    {
+      "id": "rtl.behavior.control-dependency.v1",
+      "dimension": "behavior/causality",
+      "description": "Finds static control and guard dependencies.",
+      "version": 1
+    },
+    {
+      "id": "rtl.behavior.priority.v1",
+      "dimension": "behavior/causality",
+      "description": "Finds statically provable priority among guarded actions.",
+      "version": 1
+    },
+    {
+      "id": "rtl.temporal.register-transfer.v1",
+      "dimension": "temporal/ordering",
+      "description": "Finds register boundaries and next-value relations.",
+      "version": 1
+    },
+    {
+      "id": "rtl.temporal.fsm.v1",
+      "dimension": "temporal/ordering",
+      "description": "Finds state machine states and transitions.",
+      "version": 1
+    },
+    {
+      "id": "rtl.temporal.storage.v1",
+      "dimension": "temporal/ordering",
+      "description": "Finds memories, queues, tables, and other stateful storage.",
+      "version": 1
+    },
+    {
+      "id": "rtl.temporal.pipeline-ordering.v1",
+      "dimension": "temporal/ordering",
+      "description": "Finds statically provable pipeline order and hold or flush behavior.",
+      "version": 1
+    },
+    {
+      "id": "rtl.clock-reset.register-domain.v1",
+      "dimension": "clock/reset",
+      "description": "Finds clock and reset domains for registers.",
+      "version": 1
+    },
+    {
+      "id": "rtl.clock-reset.derived-lineage.v1",
+      "dimension": "clock/reset",
+      "description": "Finds derived clock and reset lineage.",
+      "version": 1
+    },
+    {
+      "id": "rtl.semantic.module.v1",
+      "dimension": "engineering-semantic",
+      "description": "Adds evidence-backed module meaning.",
+      "version": 1
+    },
+    {
+      "id": "rtl.semantic.signal.v1",
+      "dimension": "engineering-semantic",
+      "description": "Adds evidence-backed signal meaning.",
+      "version": 1
+    },
+    {
+      "id": "rtl.semantic.subsystem.v1",
+      "dimension": "engineering-semantic",
+      "description": "Adds evidence-backed subsystem meaning.",
+      "version": 1
+    }
+  ]
+}

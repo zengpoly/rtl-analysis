@@ -1,0 +1,165 @@
+#!/usr/bin/env python3
+"""Thin CLI for the task-local rtl-query JSONL runtime."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+from pathlib import Path
+import socket
+import sys
+import uuid
+
+
+SUCCESS = {"ok", "partial"}
+
+
+def limit(value: str) -> int:
+    try:
+        parsed = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("limit must be an integer") from error
+    if not 1 <= parsed <= 100:
+        raise argparse.ArgumentTypeError("limit must be in 1..100")
+    return parsed
+
+
+def parser() -> argparse.ArgumentParser:
+    root = argparse.ArgumentParser(prog="rtlq", description=__doc__)
+    commands = root.add_subparsers(dest="command", required=True)
+
+    scope = commands.add_parser("scope", help="list direct members of a known scope")
+    scope.add_argument("target")
+    scope.add_argument("name", nargs="?")
+    scope.add_argument("--kind")
+    scope.add_argument("--limit", type=limit, default=50)
+
+    inspect = commands.add_parser("inspect", help="inspect an exact path or returned handle")
+    inspect.add_argument("target")
+
+    bindings = commands.add_parser("bindings", help="show immediate bindings for an instance")
+    bindings.add_argument("instance")
+    bindings.add_argument("--port")
+    bindings.add_argument("--limit", type=limit, default=50)
+
+    drivers = commands.add_parser("drivers", help="show native drivers for a signal")
+    drivers.add_argument("signal")
+    drivers.add_argument("--limit", type=limit, default=50)
+
+    reads = commands.add_parser("reads", help="show native procedure read sets in a scope")
+    reads.add_argument("scope")
+    reads.add_argument("--limit", type=limit, default=50)
+    knowledge = commands.add_parser(
+        "knowledge", help="query reviewed module knowledge or return an explicit bypass"
+    )
+    knowledge.add_argument("module", help="exact or unique-suffix module name")
+    knowledge.add_argument(
+        "--section", action="append",
+        choices=("function", "microarchitecture", "submodule-role", "collaboration"),
+    )
+    knowledge.add_argument("--request-kind", default="module-understanding")
+    knowledge.add_argument("--additional-requirement", action="append")
+    knowledge.add_argument(
+        "--view", choices=("answer", "full", "audit"), default="answer",
+        help="compact answer by default; expand exact references with audit",
+    )
+    knowledge.add_argument("--audit-ref", action="append")
+    knowledge.add_argument(
+        "--format", choices=("json", "readable"), default="json",
+        help="preserve JSON compatibility or print the same result as readable material",
+    )
+    result = commands.add_parser(
+        "result", help="reread a result from this run without querying the candidate"
+    )
+    result.add_argument("result_ref")
+    result.add_argument("--format", choices=("json", "readable"), default="readable")
+    return root
+
+
+def request(args: argparse.Namespace) -> dict[str, object]:
+    base: dict[str, object] = {"id": f"rtlq-{uuid.uuid4().hex}", "op": args.command}
+    actor = os.environ.get("RTLQ_ACTOR")
+    phase = os.environ.get("RTLQ_PHASE")
+    if actor:
+        base["actor"] = actor
+    if phase:
+        base["phase"] = phase
+    if args.command == "scope":
+        base.update({"path": args.target, "limit": args.limit})
+        if args.name is not None:
+            base["name"] = args.name
+        if args.kind is not None:
+            base["kind"] = args.kind
+    elif args.command == "inspect":
+        base["path"] = args.target
+    elif args.command == "bindings":
+        base.update({"instance": args.instance, "limit": args.limit})
+        if args.port is not None:
+            base["port"] = args.port
+    elif args.command in {"drivers", "reads"}:
+        base.update(
+            {
+                "op": "uses",
+                "path": args.signal if args.command == "drivers" else args.scope,
+                "mode": "drivers" if args.command == "drivers" else "procedure_reads",
+                "limit": args.limit,
+            }
+        )
+    elif args.command == "knowledge":
+        base.update({
+            "target": args.module,
+            "sections": args.section or [
+                "function", "microarchitecture", "submodule-role", "collaboration"
+            ],
+            "request_kind": args.request_kind,
+            "additional_requirements": args.additional_requirement or [],
+            "view": args.view,
+            "audit_refs": args.audit_ref or [],
+            "client_format": args.format,
+        })
+    else:
+        base.update({
+            "op": "knowledge_result",
+            "result_ref": args.result_ref,
+            "output_format": args.format,
+        })
+    return base
+
+
+def main() -> int:
+    args = parser().parse_args()
+    socket_path = Path(os.environ.get("RTLQ_SOCKET", "/tmp/agent-runner/rtlq.sock"))
+    payload = request(args)
+    try:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
+            client.settimeout(300)
+            client.connect(str(socket_path))
+            client.sendall((json.dumps(payload, sort_keys=True) + "\n").encode())
+            response = b""
+            while not response.endswith(b"\n"):
+                chunk = client.recv(65536)
+                if not chunk:
+                    break
+                response += chunk
+                if len(response) > 1_100_000:
+                    raise RuntimeError("response exceeds wrapper limit")
+        result = json.loads(response)
+    except (OSError, RuntimeError, ValueError) as error:
+        print(f"rtlq: {error}", file=sys.stderr)
+        return 2
+    if args.command == "knowledge" and args.format == "readable":
+        print(result.get("client_output", ""), end="")
+    elif args.command == "result":
+        print(result.get("content", ""), end="")
+    else:
+        print(json.dumps(result, indent=2, sort_keys=True, ensure_ascii=False))
+    status = result.get("status")
+    if status not in SUCCESS:
+        print(f"rtlq: query returned status={status}: {result.get('message', '')}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

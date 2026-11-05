@@ -1,0 +1,312 @@
+#!/usr/bin/env python3
+"""Install locked RTL tools from local cache; source-only downloads require --online."""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import platform
+import re
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+from pathlib import Path
+
+
+OFFLINE_PACKAGE_HINT = (
+    "Restore the complete rtl-analysis-agent-V1-linux-x86_64.tar.gz "
+    "(V1 offline package: V1 离线安装包（Linux x86_64）). "
+    "Source code zip/tar archives do not contain the offline runtime or cache; "
+    "transfer the full package from a connected machine."
+)
+
+
+def sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def host_platform() -> str:
+    machine = platform.machine().lower()
+    if sys.platform == "linux" and machine in {"x86_64", "amd64"}:
+        return "linux-x86_64"
+    return f"{sys.platform}-{machine}"
+
+
+def ensure_download(item: dict[str, object], downloads: Path, *, offline: bool = False) -> Path:
+    archive = downloads / str(item["archive"])
+    expected = str(item["sha256"])
+    archive.parent.mkdir(parents=True, exist_ok=True)
+    if archive.exists():
+        actual = sha256(archive)
+        if actual != expected:
+            raise RuntimeError(
+                f"cached archive hash mismatch for {archive.name}: expected {expected}, got {actual}"
+            )
+        return archive
+
+    if offline:
+        raise RuntimeError(f"offline cached artifact missing: {archive}")
+
+    partial = archive.with_suffix(archive.suffix + ".part")
+    command = [
+        "wget",
+        "--continue",
+        "--tries=20",
+        "--timeout=30",
+        "--output-document",
+        str(partial),
+        str(item["url"]),
+    ]
+    result = subprocess.run(command, check=False)
+    if result.returncode != 0:
+        raise RuntimeError(f"download failed for {archive.name}")
+    actual = sha256(partial)
+    if actual != expected:
+        raise RuntimeError(
+            f"download hash mismatch for {archive.name}: expected {expected}, got {actual}"
+        )
+    os.replace(partial, archive)
+    return archive
+
+
+def extract_locked_files(tool: dict[str, object], archive: Path, destination: Path) -> dict[str, str]:
+    file_hashes: dict[str, str] = {}
+    with tarfile.open(archive, "r:gz") as bundle:
+        members = {member.name: member for member in bundle.getmembers()}
+        for file_config in tool["files"]:  # type: ignore[index]
+            source_name = str(file_config["archive_path"])
+            install_name = str(file_config["install_path"])
+            install_path = Path(install_name)
+            if install_path.is_absolute() or ".." in install_path.parts:
+                raise RuntimeError(f"unsafe install path in manifest: {install_name}")
+            member = members.get(source_name)
+            if member is None or not member.isfile():
+                raise RuntimeError(f"archive is missing regular file: {source_name}")
+            source = bundle.extractfile(member)
+            if source is None:
+                raise RuntimeError(f"cannot read archive member: {source_name}")
+            output = destination / install_path
+            output.parent.mkdir(parents=True, exist_ok=True)
+            with source, output.open("wb") as stream:
+                shutil.copyfileobj(source, stream)
+            output.chmod(0o755)
+            file_hashes[install_name] = sha256(output)
+    return file_hashes
+
+
+def install_wheel_set(
+    tool: dict[str, object], downloads: Path, destination: Path, *, offline: bool = False
+) -> dict[str, str]:
+    required_python = tool.get("python_version")
+    actual_python = f"{sys.version_info.major}.{sys.version_info.minor}"
+    if required_python is not None and str(required_python) != actual_python:
+        raise RuntimeError(
+            f"{tool['name']} requires Python {required_python}, got {actual_python}"
+        )
+    wheels = [ensure_download(item, downloads, offline=offline) for item in tool["wheels"]]  # type: ignore[index]
+    site_packages = destination / "site-packages"
+    site_packages.mkdir(parents=True)
+    command = [
+        sys.executable,
+        "-m",
+        "pip",
+        "install",
+        "--disable-pip-version-check",
+        "--no-input",
+        "--no-index",
+        "--no-deps",
+        "--no-compile",
+        "--target",
+        str(site_packages),
+        *[str(path) for path in wheels],
+    ]
+    result = subprocess.run(command, capture_output=True, text=True, check=False)
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip()
+        raise RuntimeError(f"wheel installation failed for {tool['name']}: {detail}")
+
+    for entry_point in tool["entry_points"]:  # type: ignore[index]
+        install_name = str(entry_point["install_path"])
+        install_path = Path(install_name)
+        module = str(entry_point["module"])
+        function = entry_point.get("function")
+        attribute = entry_point.get("attribute")
+        if (
+            install_path.is_absolute()
+            or ".." in install_path.parts
+            or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_.]*", module)
+            or (function is None) == (attribute is None)
+            or (
+                function is not None
+                and not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", str(function))
+            )
+            or (
+                attribute is not None
+                and not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", str(attribute))
+            )
+        ):
+            raise RuntimeError(f"unsafe wheel entry point for {tool['name']}")
+        output = destination / install_path
+        output.parent.mkdir(parents=True, exist_ok=True)
+        lines = [
+            "#!/usr/bin/env python3",
+            "import sys",
+            "from pathlib import Path",
+            "sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'site-packages'))",
+        ]
+        if function is not None:
+            lines.extend((f"from {module} import {function}", f"{function}()"))
+        else:
+            lines.extend((f"import {module}", f"print({module}.{attribute})"))
+        output.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        output.chmod(0o755)
+
+    return {
+        path.relative_to(destination).as_posix(): sha256(path)
+        for path in sorted(destination.rglob("*"))
+        if path.is_file()
+    }
+
+
+def install_payload(
+    tool: dict[str, object], downloads: Path, destination: Path, *, offline: bool = False
+) -> tuple[dict[str, str], list[str]]:
+    if tool.get("kind", "archive") == "python-wheel-set":
+        hashes = install_wheel_set(tool, downloads, destination, offline=offline)
+        archives = [str(item["sha256"]) for item in tool["wheels"]]  # type: ignore[index]
+        return hashes, archives
+    archive = ensure_download(tool, downloads, offline=offline)
+    return extract_locked_files(tool, archive, destination), [str(tool["sha256"])]
+
+
+def current_install_matches(destination: Path, expected_hashes: dict[str, str]) -> bool:
+    return destination.is_dir() and all(
+        (destination / name).is_file() and sha256(destination / name) == expected
+        for name, expected in expected_hashes.items()
+    )
+
+
+def expected_archive_hashes(tool: dict[str, object]) -> list[str]:
+    if tool.get("kind", "archive") == "python-wheel-set":
+        return [str(item["sha256"]) for item in tool["wheels"]]  # type: ignore[index]
+    return [str(tool["sha256"])]
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--offline", action="store_true",
+                      help="use verified local artifacts only (default)")
+    mode.add_argument("--online", action="store_true",
+                      help="allow missing artifact downloads in a source checkout only")
+    args = parser.parse_args()
+    capability_root = Path(__file__).resolve().parents[1]
+    repository = capability_root.parents[1]
+    runtime_root = (
+        repository
+        if capability_root == repository / "src/rtl-pack"
+        else capability_root
+    )
+    # Detect incomplete bundles too: losing vendor/python or a cached artifact
+    # must never turn a direct invocation into an online source installation.
+    is_bundle = any((runtime_root / marker).exists() for marker in (
+        "runtime-lock.json", "bin/install", "vendor/python", "SHA256SUMS",
+    ))
+    offline = is_bundle or not args.online
+    manifest_path = capability_root / "config/toolchain.json"
+    local = runtime_root / ".local"
+    downloads = local / "downloads"
+    installs = local / "tools"
+    downloads.mkdir(parents=True, exist_ok=True)
+    installs.mkdir(parents=True, exist_ok=True)
+
+    try:
+        if is_bundle and args.online:
+            raise RuntimeError("offline bundle rejects --online; use ./bin/install")
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if manifest["schema"] != "rtl-analysis-agent/toolchain-v1":
+            raise RuntimeError("unsupported toolchain manifest")
+        actual_platform = host_platform()
+        if manifest["platform"] != actual_platform:
+            raise RuntimeError(
+                f"unsupported host platform: expected {manifest['platform']}, got {actual_platform}"
+            )
+
+        if offline:
+            # Validate the whole cache before changing any installed tool.
+            for tool in manifest["tools"]:
+                for item in tool.get("wheels", [tool]):
+                    ensure_download(item, downloads, offline=True)
+
+        receipt_path = installs / "receipt.json"
+        previous_tools: dict[str, dict[str, object]] = {}
+        if receipt_path.is_file():
+            previous = json.loads(receipt_path.read_text(encoding="utf-8"))
+            previous_tools = {item["name"]: item for item in previous.get("tools", [])}
+
+        receipts: list[dict[str, object]] = []
+        for tool in manifest["tools"]:
+            final = installs / str(tool["name"]) / str(tool["version"])
+            previous = previous_tools.get(str(tool["name"]))
+            if (
+                previous
+                and previous.get("version") == tool["version"]
+                and previous.get("archive_sha256") == expected_archive_hashes(tool)
+                and isinstance(previous.get("files"), dict)
+                and current_install_matches(final, previous["files"])  # type: ignore[arg-type]
+            ):
+                receipts.append(previous)
+                continue
+            with tempfile.TemporaryDirectory(prefix=f".{tool['name']}-", dir=installs) as temp_name:
+                staged = Path(temp_name)
+                hashes, archive_hashes = install_payload(tool, downloads, staged, offline=offline)
+                if final.exists():
+                    if not current_install_matches(final, hashes):
+                        raise RuntimeError(
+                            f"existing install differs from locked payload: {final}; move it aside and retry"
+                        )
+                else:
+                    final.parent.mkdir(parents=True, exist_ok=True)
+                    os.replace(staged, final)
+                receipts.append(
+                    {
+                        "name": tool["name"],
+                        "version": tool["version"],
+                        "archive_sha256": archive_hashes,
+                        "files": hashes,
+                    }
+                )
+
+        receipt_path.write_text(
+            json.dumps(
+                {
+                    "schema": "rtl-analysis-agent/tool-install-receipt-v1",
+                    "manifest_sha256": sha256(manifest_path),
+                    "tools": receipts,
+                },
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+    except (KeyError, OSError, RuntimeError, tarfile.TarError, ValueError) as error:
+        print(f"install-tools: FAIL {error}", file=sys.stderr)
+        if offline:
+            print(f"install-tools: offline mode. {OFFLINE_PACKAGE_HINT}", file=sys.stderr)
+        return 1
+
+    print("install-tools: PASS " + ", ".join(f"{item['name']}@{item['version']}" for item in receipts))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

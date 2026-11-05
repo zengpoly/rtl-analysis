@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+"""Assemble one offline source/runtime package from verified local artifacts."""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import tarfile
+import tempfile
+
+
+def digest(path: Path) -> str:
+    with path.open("rb") as stream:
+        return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def verified(source: Path, record: dict) -> Path:
+    path = source / record["archive"]
+    if not path.is_file() or digest(path) != record["sha256"]:
+        raise ValueError(f"missing or mismatched artifact: {path}")
+    return path
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--downloads", type=Path, required=True)
+    parser.add_argument("--python-cache", type=Path, required=True)
+    parser.add_argument("--python-wheels", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args()
+    root = Path(__file__).resolve().parents[1]
+    if subprocess.check_output(["git", "status", "--porcelain"], cwd=root):
+        raise ValueError("commit source changes before building a release")
+    revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
+    lock = json.loads((root / "packaging/runtime-lock.json").read_text())
+    tools = json.loads((root / "src/rtl-pack/config/toolchain.json").read_text())
+    python_archive = verified(args.python_cache, lock["python"])
+    artifacts = [(verified(args.downloads, item), item) for tool in tools["tools"]
+                 for item in tool.get("wheels", [tool])]
+    wheels = [verified(args.python_wheels, item) for item in lock["python_packages"]]
+    args.output.mkdir(parents=True, exist_ok=True)
+    archive = args.output / "rtl-analysis-agent-V1-linux-x86_64.tar.gz"
+    if archive.exists():
+        raise ValueError(f"refusing to overwrite release: {archive}")
+    with tempfile.TemporaryDirectory(prefix="rtl-v1-build-", dir=args.output) as work:
+        package = Path(work) / "rtl-analysis-agent-V1"
+        package.mkdir()
+        tracked = subprocess.check_output(["git", "ls-files"], cwd=root, text=True).splitlines()
+        prefixes = ("src/rtl-pack/bin/", "src/rtl-pack/lib/", "src/rtl-pack/config/",
+                    "src/rtl-pack/skills/rtl-query/", "projects/example/")
+        exact = {"quickstart.md", "AGENTS.md", "CLAUDE.md",
+                 "src/rtl-pack/scripts/install-tools", "src/rtl-pack/templates/rtl-project.json",
+                 "src/rtl-pack/docs/mvp-toolchain.md"}
+        for name in tracked:
+            if (name in exact or name.startswith(prefixes)) and not name.startswith("src/rtl-pack/config/rendering/"):
+                target = package / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(root / name, target)
+        (package / "bin").mkdir()
+        for name in ("install", "rtl"):
+            shutil.copy2(root / "packaging" / name, package / "bin" / name)
+        shutil.copy2(root / "packaging/README.md", package / "README.md")
+        shutil.copy2(root / "packaging/runtime-lock.json", package / "runtime-lock.json")
+        shutil.copytree(root / "packaging/licenses", package / "LICENSES")
+        for source, item in artifacts:
+            target = package / ".local/downloads" / item["archive"]
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, target)
+        runtime = package / "vendor"
+        runtime.mkdir()
+        with tarfile.open(python_archive) as bundle:
+            bundle.extractall(runtime, filter="data")
+        environment = os.environ.copy()
+        environment["PYTHONDONTWRITEBYTECODE"] = "1"
+        subprocess.run([str(runtime / "python/bin/python3"), "-m", "pip", "install",
+                        "--no-index", "--no-deps", "--no-compile", "--disable-pip-version-check",
+                        *map(str, wheels)], env=environment, check=True)
+        domain_path = package / "src/rtl-pack/config/domain-pack.json"
+        domain = json.loads(domain_path.read_text())
+        domain["skills"] = ["rtl-query"]
+        domain["files"] = [str(p.relative_to(package / "src/rtl-pack"))
+                           for p in sorted((package / "src/rtl-pack").rglob("*")) if p.is_file()]
+        domain_path.write_text(json.dumps(domain, indent=2) + "\n")
+        manifest = {"version": "V1", "source_commit": revision, "platform": "linux-x86_64",
+                    "python": lock["python"], "python_packages": lock["python_packages"],
+                    "tools": tools["tools"], "scope": "Source and Runtime query"}
+        (package / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+        sums = [f"{digest(p)}  {p.relative_to(package)}\n" for p in sorted(package.rglob("*"))
+                if p.is_file() and not p.is_symlink() and not p.is_relative_to(package / "projects")]
+        (package / "SHA256SUMS").write_text("".join(sums))
+        with tarfile.open(archive, "w:gz") as bundle:
+            bundle.add(package, arcname=package.name)
+    archive.with_name(archive.name + ".sha256").write_text(f"{digest(archive)}  {archive.name}\n")
+    print(archive)
+
+
+if __name__ == "__main__":
+    main()

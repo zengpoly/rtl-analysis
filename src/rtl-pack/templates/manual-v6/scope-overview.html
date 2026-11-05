@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}分析范围 · RTL 知识手册 V6{% endblock %}
+{% block content %}
+<header class="page-header">
+  <p class="eyebrow">RTL 知识手册 V6 · SCOPE_OVERVIEW · 仅展示投影</p>
+  <h1>分析范围</h1>
+  <p class="scope-name">{{ scope_display_label }}</p>
+  <p class="identity">{{ scope.scope_id }}</p>
+</header>
+<section class="metrics">
+  <article><strong>{{ scope.scope_mode }}</strong><span>范围模式</span></article>
+  <article><strong>{{ scope.roots|length }}</strong><span>知识根节点</span></article>
+  <article><strong>{{ model.actuals|length }}</strong><span>实际实例</span></article>
+  <article><strong>{{ model.modules|length }}</strong><span>模块定义</span></article>
+  <article><strong>{{ model.sources|length }}</strong><span>纳入范围的源码</span></article>
+</section>
+<section class="panel">
+  <h2>构建与源码身份</h2>
+  <dl class="grid-dl">
+    {% for key, value in scope.build_identity|dictsort %}<dt>{{ key }}</dt><dd><code>{{ value }}</code></dd>{% endfor %}
+  </dl>
+</section>
+<section class="panel">
+  <h2>根节点</h2>
+  {% if scope.roots %}<ul>{% for root in scope.roots %}<li><a href="{{ href(page_map[root.entity_id]) }}">{{ model.entities[root.entity_id].qualified_name }}</a> · {{ root.role }} · {{ root.resolution_state }}</li>{% endfor %}</ul>
+  {% else %}<p class="callout">没有可确认的知识根节点</p>{% endif %}
+</section>
+<section class="panel two-column">
+  <div><h2>边界与依赖</h2><p><code>{{ scope.boundary_policy.kind }}</code>, 最大深度 {{ scope.boundary_policy.max_depth }}</p><p><code>{{ scope.dependency_policy.kind }}</code></p></div>
+  <div><h2>配置规范与词汇表</h2><p>{{ scope.profile.id }} @ {{ scope.profile.version }}</p><p>{{ scope.vocabulary.id }} @ {{ scope.vocabulary.version }}</p></div>
+</section>
+<section class="panel two-column">
+  <div><h2>事实生成能力</h2><dl>{% for key, value in scope.producer_capability|dictsort %}<dt>{{ key }}</dt><dd>{{ value }}</dd>{% endfor %}</dl></div>
+  <div><h2>完整性</h2><dl>{% for key, value in scope.completeness|dictsort %}<dt>{{ key }}</dt><dd>{{ value }}</dd>{% endfor %}</dl></div>
+</section>
+{% if scope.limitations %}<section class="panel"><h2>已知限制</h2><ul>{% for item in scope.limitations %}<li>{{ item|display_text }}</li>{% endfor %}</ul></section>{% endif %}
+<section class="panel provenance provenance-source" data-provenance="source-evidence"><span class="provenance-label">RTL 源码 / 源码证据</span><h2>源码清单 <span class="count">{{ model.sources|length }}</span></h2><p class="muted">以下为已核验的知识源码定位；完整清单可在侧栏“源码文件”中查找。</p><ul>{% for source in model.sources[:model.preview_limits.sources] %}<li>{% if source.entity_id in page_map %}<a href="{{ href(page_map[source.entity_id]) }}">{{ source.qualified_name }}</a>{% else %}<code>{{ source.qualified_name }}</code>{% endif %} <span class="badge">{{ source.status }}</span> <span class="identity">SHA-256 {{ source.expected_sha256[:12] }}…</span></li>{% endfor %}</ul>{% if model.sources|length > model.preview_limits.sources %}<p class="more">当前展示 {{ model.preview_limits.sources }} / {{ model.sources|length }} 份源码。</p>{% endif %}</section>
+{% include "components/semantic-slots.html" %}
+{% endblock %}

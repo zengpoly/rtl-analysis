@@ -1,0 +1,132 @@
+{
+  "schema": "rtl-analysis-agent/toolchain-v1",
+  "platform": "linux-x86_64",
+  "tools": [
+    {
+      "name": "slang",
+      "version": "v11.0",
+      "repository": "https://github.com/MikePopoloski/slang",
+      "license": "MIT",
+      "url": "https://github.com/MikePopoloski/slang/releases/download/v11.0/slang-linux-x86_64.tar.gz",
+      "archive": "slang-linux-x86_64.tar.gz",
+      "sha256": "951a170e10e25e54c91565030acfdfc11c3226714ebf225a18ad4166a898d8a4",
+      "files": [
+        {
+          "archive_path": "slang",
+          "install_path": "bin/slang"
+        }
+      ],
+      "version_command": ["bin/slang", "--version"],
+      "version_contains": "11.0"
+    },
+    {
+      "name": "pyslang",
+      "version": "11.0.0",
+      "repository": "https://github.com/MikePopoloski/slang",
+      "license": "MIT",
+      "kind": "python-wheel-set",
+      "python_version": "3.12",
+      "wheels": [
+        {
+          "package": "pyslang",
+          "version": "11.0.0",
+          "license": "MIT",
+          "archive": "pyslang-11.0.0/pyslang-11.0.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+          "url": "https://files.pythonhosted.org/packages/77/29/c677c2b3f7b3b8dfe19341849afb8fda288f7a984df1a8bd4ad04d58560f/pyslang-11.0.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+          "sha256": "a964ac225b5f3e92a57459673c17634884184ae3091a76f8cf5e0b9e2aeca8b2"
+        }
+      ],
+      "entry_points": [
+        {
+          "install_path": "bin/pyslang-version",
+          "module": "pyslang",
+          "attribute": "__version__"
+        }
+      ],
+      "version_command": ["bin/pyslang-version"],
+      "version_contains": "11.0.0"
+    },
+    {
+      "name": "verible",
+      "version": "v0.0-4163-g6cce8f19",
+      "repository": "https://github.com/chipsalliance/verible",
+      "license": "Apache-2.0",
+      "url": "https://github.com/chipsalliance/verible/releases/download/v0.0-4163-g6cce8f19/verible-v0.0-4163-g6cce8f19-linux-static-x86_64.tar.gz",
+      "archive": "verible-v0.0-4163-g6cce8f19-linux-static-x86_64.tar.gz",
+      "sha256": "ddb9c7ea1fe60146ce2fc9f2f2d7a6c0257d08bf51a98dc0ccb4b47b44161bd8",
+      "files": [
+        {
+          "archive_path": "verible-v0.0-4163-g6cce8f19/bin/verible-verilog-lint",
+          "install_path": "bin/verible-verilog-lint"
+        },
+        {
+          "archive_path": "verible-v0.0-4163-g6cce8f19/bin/verible-verilog-syntax",
+          "install_path": "bin/verible-verilog-syntax"
+        }
+      ],
+      "version_command": ["bin/verible-verilog-syntax", "--version"],
+      "version_contains": "v0.0-4163-g6cce8f19"
+    },
+    {
+      "name": "yosys",
+      "version": "0.67.0.0.post1190",
+      "upstream_version": "v0.67",
+      "distribution": "YoWASP WebAssembly package",
+      "repository": "https://codeberg.org/YoWASP/yosys",
+      "upstream_repository": "https://github.com/YosysHQ/yosys",
+      "license": "ISC",
+      "kind": "python-wheel-set",
+      "wheels": [
+        {
+          "package": "yowasp-yosys",
+          "version": "0.67.0.0.post1190",
+          "license": "ISC",
+          "archive": "yowasp-yosys-0.67/yowasp_yosys-0.67.0.0.post1190-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/e4/9c/d9b6ae3795a911b8cbc61a8c656d0c8f661a63cb1c2f97c5ab61f02716e6/yowasp_yosys-0.67.0.0.post1190-py3-none-any.whl",
+          "sha256": "b3f48c4d24d42daf5146c9932356df223485086868be8171855f79721d56464a"
+        },
+        {
+          "package": "yowasp-runtime",
+          "version": "1.96",
+          "license": "ISC",
+          "archive": "yowasp-yosys-0.67/yowasp_runtime-1.96-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/92/e2/4dd5c8392a3f085f5ba81b5a4ac5f59923a0c3b36a35351975d8d7de19c9/yowasp_runtime-1.96-py3-none-any.whl",
+          "sha256": "4ff456a4a6dff9d689c7feac9f68fb1492bed4cf873450d7b41259fa31645783"
+        },
+        {
+          "package": "click",
+          "version": "8.5.0",
+          "license": "BSD-3-Clause",
+          "archive": "yowasp-yosys-0.67/click-8.5.0-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/58/50/6c0d534c5f134586a8e1ba4e330569e32f057e33372ae556463212fb4cd3/click-8.5.0-py3-none-any.whl",
+          "sha256": "255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360"
+        },
+        {
+          "package": "platformdirs",
+          "version": "4.11.7",
+          "license": "MIT",
+          "archive": "yowasp-yosys-0.67/platformdirs-4.11.7-py3-none-any.whl",
+          "url": "https://files.pythonhosted.org/packages/27/6e/80993e10a0482f630cef528635789233224f36b1ffd11592aa15d13ff9ce/platformdirs-4.11.7-py3-none-any.whl",
+          "sha256": "8a02cb259042c79d1cd0450facc2fe6dc9d303ae7901afbe33bf8ea0b188cef6"
+        },
+        {
+          "package": "wasmtime",
+          "version": "47.0.1",
+          "license": "Apache-2.0 WITH LLVM-exception",
+          "archive": "yowasp-yosys-0.67/wasmtime-47.0.1-py3-none-manylinux1_x86_64.whl",
+          "url": "https://files.pythonhosted.org/packages/5e/ba/f321faaad1d616b94fe70a62ebb7e4054cfe41a6a46aa796ad2bb07fa08c/wasmtime-47.0.1-py3-none-manylinux1_x86_64.whl",
+          "sha256": "9724600b036c6e95c4fe952e29fad83b4f02bdc11d23f25c4ee3ffff2c1d7257"
+        }
+      ],
+      "entry_points": [
+        {
+          "install_path": "bin/yosys",
+          "module": "yowasp_yosys",
+          "function": "_run_yosys_argv"
+        }
+      ],
+      "version_command": ["bin/yosys", "-V"],
+      "version_contains": "Yosys 0.67"
+    }
+  ]
+}

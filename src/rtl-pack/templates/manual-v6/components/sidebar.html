@@ -1,0 +1,23 @@
+<aside class="sidebar">
+  <label class="search-label" for="manual-search">查找对象</label>
+  <input id="manual-search" type="search" placeholder="实例、模块定义或源码路径">
+  <div id="search-results" class="search-results"></div>
+  <nav aria-label="Build1 导航">
+    <section class="presentation-group" data-presentation-group="RTL Structure">
+      <h2>RTL 结构 <span>{{ model.actuals|length }}</span></h2>
+      <div id="rtl-structure-tree" class="structure-tree">
+        {% if not scope.roots %}<p class="muted">没有可确认的知识根节点</p>{% endif %}
+      </div>
+    </section>
+    <section class="presentation-group" data-presentation-group="Module Definitions">
+      <details class="catalog" data-catalog="MODULE_DEFINITION"><summary>模块定义 <span>{{ model.modules|length }}</span></summary><ul></ul></details>
+    </section>
+    <section class="presentation-group" data-presentation-group="Page Types">
+      <h2>页面类型</h2>
+      <ul>{% for item in model.page_types %}{% if item.reference_path %}<li><a href="{{ href(item.reference_path) }}">{{ item.label|display_text }}</a><small class="page-type-reference">参考页面：{{ item.reference_name }}</small></li>{% endif %}{% endfor %}</ul>
+    </section>
+    <section class="presentation-group" data-presentation-group="Source Files">
+      <details class="catalog" data-catalog="SOURCE_FILE"><summary>源码文件 <span>{{ model.sources|length }}</span></summary><ul></ul></details>
+    </section>
+  </nav>
+</aside>

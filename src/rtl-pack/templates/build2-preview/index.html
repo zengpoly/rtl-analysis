@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build2草稿预览</title><style>
+body{font:16px/1.65 system-ui,sans-serif;background:#f4f6f8;color:#172536;margin:0}main{max-width:1080px;margin:auto;padding:24px}header,section,article{background:white;border:1px solid #d7dfe7;border-radius:8px;padding:20px;margin-bottom:18px}h1,h2,h3{line-height:1.3}a{color:#125ca1}.banner{border-left:6px solid #bd6515}.badge{font-weight:bold;color:#8b4108}details{margin:12px 0;border-top:1px solid #d7dfe7;padding-top:8px}summary{cursor:pointer;color:#255574}pre,code{overflow-wrap:anywhere;white-space:pre-wrap;font-size:13px}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:8px;border-bottom:1px solid #d7dfe7;overflow-wrap:anywhere}.notice{background:#fff5df;padding:12px}.claim{border-left:3px solid #5588ae;padding-left:16px}.text{white-space:pre-wrap;overflow-wrap:anywhere}.muted{color:#536578}nav{display:flex;flex-wrap:wrap;gap:16px}
+</style></head><body><main>
+<header class="banner"><h1>Build2草稿预览</h1><p class="badge">DRAFT_UNREVIEWED / NOT PUBLISHED</p>
+<p>任务完成度：{{ report.get('completion','open') }} · 组合自检：{{ report.get('combination',{}).get('status','missing') }}</p>
+<p>阶段 review 和 self_checked 均为作者自检；独立审核与发布未在本预览中证明。</p>
+<p class="notice">正文按当前有效草稿原文展示，不自动翻译。英文旧稿需作者通过公共 revise 修订为中文；中文标题不代表正文已中文化。</p>
+<nav><a href="#scope">范围与问题</a>{% for item in blocks %}<a href="#block-{{ loop.index }}">{{ item.name }}</a>{% endfor %}<a href="#evidence">任务证据</a></nav></header>
+<section id="scope"><h2>范围与当前问题</h2><p class="text">{{ state.target }}</p>
+{% if plan %}<p>边界：{{ plan.boundary }}</p><ul>{% for target in plan.targets %}<li>{{ target.question }} — {{ report.get('targets',{}).get(target.id,{}).get('status','unknown') }}</li>{% endfor %}</ul>{% endif %}
+<p>下一步：{{ report.next_action }}</p><p>未解决：{{ report.unresolved|pretty }}</p>
+{% if plan %}<details><summary>冻结计划原文（历史描述）</summary><pre>{{ plan|pretty }}</pre></details>{% endif %}</section>
+{% for item in blocks %}<section id="block-{{ loop.index }}"><h2>{{ item.name }} · {{ item.block.get('goal','') }}</h2>
+<p>适用边界：{{ item.block.get('boundary','unknown') }} · 缺失阶段：{{ item.missing|join(', ') if item.missing else '无（仍需独立审核）' }}</p>
+{% if item.detail %}{% set detail = item.detail %}
+<h3>当前结构对象</h3><p>对象类型：{{ detail.page_kind }} · {{ detail.object.get('qualified_name', 'unknown') }}</p>
+<details><summary>实例与模块定义身份</summary><p>实际实例：{{ detail.object.entity_id if detail.page_kind == 'ACTUAL_INSTANCE' else 'unknown / 当前对象是定义' }}</p><p>模块定义：{{ item.definition_id }}</p><pre>{{ item.block.map_anchor|pretty }}</pre></details>
+<h3>当前参数事实</h3><table><thead><tr><th>参数</th><th>实际值</th><th>是否覆盖</th><th>来源</th></tr></thead><tbody>{% for param in detail.get('effective_parameters',[]) %}<tr><td>{{ param.get('name','unknown') }}</td><td>{{ param.get('value','unknown') }}</td><td>{{ param.get('overridden','unknown')|pretty }}</td><td><details><summary>结构证据</summary><pre>{{ param|pretty }}</pre></details></td></tr>{% else %}<tr><td colspan="4">未提供实例参数；不推断默认值。</td></tr>{% endfor %}</tbody></table>
+<p>参数列表截断：{{ detail.get('parameters_truncated','unknown')|pretty }}</p>
+{% else %}<p>结构身份 / 参数：unknown（无当前 map_anchor）。</p>{% endif %}
+<p class="notice">配置来源与冲突核对：当前结构参数是实际事实；下面的冻结计划配置是历史文字，两者如有冲突必须由作者核对并 revise。值等于默认值不等于未覆盖；预览不判定自然语言结论真伪。</p>
+<details><summary>历史配置原文与当前结构原文对照</summary><p>{{ item.block.get('configuration','unknown') }}</p>{% if plan %}<p>{{ plan.configuration }}</p>{% endif %}<pre>{{ item.detail|pretty }}</pre></details>
+<h3>当前有效结论</h3>{% if 'draft' in item.stages %}{% set draft = item.stages.draft %}
+{% for claim in draft.payload.claims %}<article class="claim"><div class="text">{% if claim is string %}{{ claim }}{% else %}{{ claim|pretty }}{% endif %}</div><details><summary>追溯当前 claim · claims[{{ loop.index0 }}]</summary><p>task:{{ draft.path }} / claims[{{ loop.index0 }}]</p><code>SHA256 {{ draft.sha256 }}</code><pre>{{ draft.payload.references|pretty }}</pre></details></article>{% endfor %}
+<h3>未知与适用限制</h3><pre>{{ draft.payload.unknowns|pretty }}</pre>
+{% else %}<p>该块没有当前有效 draft，不展示历史草稿。</p>{% endif %}
+{% for stage, artifact in item.stages.items() %}<details><summary>{{ stage }} 当前原件 / 源码定位 / 自检详情</summary><p>task:{{ artifact.path }} · SHA256 {{ artifact.sha256 }}</p><pre>{{ artifact.payload|pretty }}</pre></details>{% endfor %}
+</section>{% endfor %}
+<section id="evidence"><h2>任务证据</h2><p>源码和原件位于服务目录之外，仅提供真实定位，不生成无法访问的链接。</p><details><summary>校验报告与输入身份</summary><pre>{{ report|pretty }}</pre><pre>{{ state.identity|pretty }}</pre></details><details><summary>当前组合自检原文</summary><pre>{{ combination|pretty }}</pre></details><a href="preview-manifest.json">预览输入清单与 SHA256</a></section>
+</main></body></html>

@@ -1,0 +1,64 @@
+{
+  "definitions": [
+    {"kind": "Definition", "name": "leaf_out", "source_file": "rtl/leaf_out.sv", "source_line": 1},
+    {"kind": "Definition", "name": "leaf_in", "source_file": "rtl/leaf_in.sv", "source_line": 1},
+    {"kind": "Definition", "name": "top", "source_file": "rtl/top.sv", "source_line": 1}
+  ],
+  "design": {
+    "kind": "Root",
+    "members": [
+      {
+        "kind": "Instance",
+        "name": "top",
+        "source_file": "rtl/top.sv",
+        "source_line": 1,
+        "connections": [],
+        "body": {
+          "kind": "InstanceBody",
+          "name": "top",
+          "members": [
+            {
+              "kind": "Instance",
+              "name": "u_out",
+              "source_file": "rtl/top.sv",
+              "source_line": 10,
+              "connections": [
+                {
+                  "port": {"kind": "Port", "name": "value", "direction": "Out", "source_file": "rtl/leaf_out.sv", "source_line": 2},
+                  "expr": {"kind": "Assignment", "source_file_start": "rtl/top.sv", "source_line_start": 10, "source_line_end": 10, "left": {"kind": "NamedValue", "symbol": "101 shared"}}
+                }
+              ],
+              "body": {
+                "kind": "InstanceBody",
+                "name": "leaf_out",
+                "members": [
+                  {"kind": "Assignment", "source_file_start": "rtl/leaf_out.sv", "source_line_start": 4, "source_line_end": 4, "left": {"kind": "NamedValue", "symbol": "102 value"}, "right": {"kind": "NamedValue", "symbol": "103 source"}}
+                ]
+              }
+            },
+            {
+              "kind": "Instance",
+              "name": "u_in",
+              "source_file": "rtl/top.sv",
+              "source_line": 20,
+              "connections": [
+                {
+                  "port": {"kind": "Port", "name": "value", "direction": "In", "source_file": "rtl/leaf_in.sv", "source_line": 2},
+                  "expr": {"kind": "NamedValue", "symbol": "101 shared", "source_file_start": "rtl/top.sv", "source_line_start": 20, "source_line_end": 20}
+                }
+              ],
+              "body": {
+                "kind": "InstanceBody",
+                "name": "leaf_in",
+                "members": [
+                  {"kind": "Parameter", "name": "IDLE", "value": "1'b0", "source_file": "rtl/leaf_in.sv", "source_line": 3},
+                  {"kind": "Parameter", "name": "RUN", "value": "1'b1", "source_file": "rtl/leaf_in.sv", "source_line": 4}
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

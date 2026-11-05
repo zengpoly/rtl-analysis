@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}RTL Build1 结构手册{% endblock %}</title>
+  <link rel="stylesheet" href="{{ asset_href('manual.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body data-page-kind="{{ page_kind }}" data-page-template="{{ page_template }}"{% if page is defined and page.entity_id %} data-object-id="{{ page.entity_id }}"{% endif %}>
+  <header class="topbar">
+    <a class="brand" href="{{ home_href }}">{{ manual_brand|default('RTL Build1 Manual')|display_text }}</a>
+    <a class="scope-global" href="{{ home_href }}"><span>分析范围</span><strong>{{ scope_display_label }}</strong>{% if model.scope_presentation.detail %}<small>{{ model.scope_presentation.detail }}</small>{% endif %}</a>
+    <span class="build">{{ metadata.build_sha256[:12] }}</span>
+  </header>
+  <div class="layout">
+    {% include "components/sidebar.html" %}
+    <main>{% block content %}{% endblock %}</main>
+  </div>
+  <script src="{{ asset_href('tree-data.js') }}"></script>
+  <script src="{{ asset_href('search-data.js') }}"></script>
+  <script src="{{ asset_href('manual.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

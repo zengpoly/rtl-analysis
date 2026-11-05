@@ -1,0 +1,44 @@
+{
+  "modules": {
+    "leaf_in": {
+      "ports": {
+        "clk": {"direction": "input", "bits": [1]},
+        "rst_n": {"direction": "input", "bits": [2]},
+        "data": {"direction": "input", "bits": [3]},
+        "sel": {"direction": "input", "bits": [4]},
+        "result": {"direction": "output", "bits": [6]}
+      },
+      "netnames": {
+        "clk": {"hide_name": 0, "bits": [1], "attributes": {"src": "/src/leaf_in.sv:2.1-2.3"}},
+        "rst_n": {"hide_name": 0, "bits": [2], "attributes": {"src": "/src/leaf_in.sv:2.1-2.3"}},
+        "data": {"hide_name": 0, "bits": [3], "attributes": {"src": "/src/leaf_in.sv:2.1-2.3"}},
+        "sel": {"hide_name": 0, "bits": [4], "attributes": {"src": "/src/leaf_in.sv:2.1-2.3"}},
+        "next": {"hide_name": 0, "bits": [5], "attributes": {"src": "/src/leaf_in.sv:5.1-5.10"}},
+        "result": {"hide_name": 0, "bits": [6], "attributes": {"src": "/src/leaf_in.sv:6.1-6.10"}},
+        "gclk": {"hide_name": 0, "bits": [7], "attributes": {"src": "/src/leaf_in.sv:7.1-7.10"}}
+      },
+      "cells": {
+        "$mux$/src/leaf_in.sv:5$1": {
+          "type": "$mux",
+          "attributes": {"src": "/src/leaf_in.sv:5.1-5.10"},
+          "port_directions": {"A": "input", "B": "input", "S": "input", "Y": "output"},
+          "connections": {"A": [3], "B": [6], "S": [4], "Y": [5]},
+          "parameters": {}
+        },
+        "$adff$/src/leaf_in.sv:6$2": {
+          "type": "$adff",
+          "attributes": {"src": "/src/leaf_in.sv:6.1-6.10"},
+          "port_directions": {"ARST": "input", "CLK": "input", "D": "input", "Q": "output"},
+          "connections": {"ARST": [2], "CLK": [7], "D": [5], "Q": [6]},
+          "parameters": {"WIDTH": "1", "CLK_POLARITY": "1", "ARST_POLARITY": "0", "ARST_VALUE": "0"}
+        },
+        "u_gate": {
+          "type": "gated_clk_cell",
+          "attributes": {"src": "/src/leaf_in.sv:7.1-7.10"},
+          "connections": {"clk_in": [1], "clk_out": [7]},
+          "parameters": {}
+        }
+      }
+    }
+  }
+}
