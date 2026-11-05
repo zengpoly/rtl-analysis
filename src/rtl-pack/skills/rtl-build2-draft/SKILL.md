@@ -11,6 +11,10 @@ metadata:
 
 从匹配的 Build1 candidate 为用户指定 Project/范围生成带证据的小块草稿；先列 targets、直接 covers、依赖和未启动块。同块可共享 Facts/Source。产物始终是 `DRAFT_UNREVIEWED`；self_checked、文件齐全或 helper 成功不等于独立审核、READY、知识发布或 Manual 发布。
 
+## 源码仓库入口
+
+在源码仓库根目录使用 `./src/rtl-pack/bin/rtl`，`<Skill>` 为 `src/rtl-pack/skills/rtl-build2-draft`；先按根目录 `quickstart.md` 激活 Python 环境。下方及 references 中的 portable 示例逐项映射：`./bin/rtl` 或 `rtl` → `./src/rtl-pack/bin/rtl`；`./bin/workspace __domain-python` → `python3`；`capability/config/` → `src/rtl-pack/config/`。`<Skill>` 始终替换为上面的实际源码路径。所有参数、落盘、退出码、字节预算与身份核验规则保持适用，不创建额外包装器，也不运行不存在的 Workspace 入口。
+
 ## 路径与读取约定
 
 在目标 Workspace 根调用自己的 `./bin/rtl`、`./bin/workspace __domain-python`；`<Skill>` 为 `capability/skills/rtl-build2-draft`。外部 cwd 用实际 Workspace/Skill 绝对路径；Source Git 核验在 Project/source。task 位于 Project/analysis/tasks；所有路径按当前 cwd 解析，勿从 Workspace 根传裸 task 名或 Project-relative task。每次调用重新推导路径，不假定 shell 变量跨调用保留。`--model`/`RTL_CONTEXT_MODEL` 原样用 receipt 的 Project-relative candidate.path。

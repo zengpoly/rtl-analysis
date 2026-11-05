@@ -1,13 +1,12 @@
-# RTL 分析实现与验证
+# RTL 知识构建预览实现
 
-- `src/rtl-pack/bin/rtl`：命令行入口。
-- `src/rtl-pack/lib/rtl_analysis_cli.py`：工程选择、工具检查和单文件命令。
-- `src/rtl-pack/lib/rtl_query_runtime.py`：任务内 PySlang 查询。
-- `src/rtl-pack/scripts/install-tools`：按版本锁和 SHA256 安装工具。
-- `tests/`：当前产品回归；`./check` 检查文件、执行权限、Skill 元数据并运行测试。
+- `rtl_analysis_cli.py`：工程、工具和公开 Build / Query / Manual 子命令。
+- `rtl_build1.py`、`rtl_module_knowledge.py`：结构候选构建、验证与复用。
+- `rtl_knowledge_prototype.py`、`rtl_query_v02.py`：知识合同、Store 和只读知识查询。
+- `rtl_manual_v6.py`：candidate 的 deterministic Manual 映射；`rtl_build2_preview.py`：受身份与阶段核验的草稿预览。
+- `skills/rtl-build2-draft/`：有界草稿工作流、阶段规则和公开状态 helper。
+- `rtl_query_runtime.py`：任务内 PySlang 查询；`tests/` 保存产品回归。
 
-裸 `rtl doctor` 检查工具；指定 `--project` 或 `--target` 时同时检查源码身份。根目录识别不依赖研发资料目录。
+上述文件位于 `src/rtl-pack/` 下；分析库位于 `lib/`，状态 helper 位于相应 Skill 的 `scripts/`。源码仓库和离线包共用这些实现；本分支的包装脚本包含全部公共 Skills、模板和说明，不再只打包 V1 默认查询 Skill。
 
-最小工程见 [example](../projects/example/README.md)。测试保留当前产品回归，不携带旧研发任务、退休原型和固定实验题库。
-
-全仓检查不安装工具、不调用模型，也不代替目标机器与客户端的实际验收。
+`./check` 验证文件、执行权限、Skill 元数据与回归。它不调用模型，不代替目标机器、真实工程或语义发布审核。实际验证见[发布前验证](validation.md)。

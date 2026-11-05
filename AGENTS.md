@@ -1,24 +1,20 @@
 # Agent 使用入口
 
-用户说“please help me install”“please help mu install”或“帮我安装”时，直接执行下面对应目录的安装流程。对于完整离线包，在根目录运行 `./bin/install`，成功后运行 `./bin/rtl --project projects/example doctor` 和 `./bin/rtl --project projects/example syntax`；全部退出码为 0 且检查通过才报告安装成功。用户无需先提供自己的 RTL 工程。模型客户端与服务由使用者提供，安装只使用包内文件，禁止访问外部站点或在线包管理器；缺件或失败时停止并报告具体原因，由用户从联网机器重新转入完整包。保留已有工程和源码。
+本分支提供 RTL 知识构建预览工作流，用中文回复。先判断目录：存在根目录 `bin/install`、`runtime-lock.json`、`vendor/python/` 或 `SHA256SUMS` 任一项时，按完全离线包处理，读取根目录 README，执行 `./bin/install`，使用 `./bin/rtl`。安装只使用包内文件；缺件、校验或加载失败时停止，向交付方取得完整知识构建预览包。保留用户已有工程和源码。
 
-先判断当前目录：根目录存在 `bin/install`、`runtime-lock.json`、`vendor/python/` 或 `SHA256SUMS` 任一项时，按完全离线包处理，先读根目录 `README.md` 的离线安装说明，安装用 `./bin/install`，CLI 用 `./bin/rtl`，工程放在 `projects/`。缺件或校验失败时停止，提示用户转入完整离线包。
-
-其余目录是源码仓库（包括 GitHub 自动生成的 Source code zip/tar 归档），先读 `quickstart.md` 判断环境；完全离线机器需要完整离线包，源码归档无法直接离线安装。安装器默认只使用本地缓存，缺件即停止并提示取得完整离线包。安装与工具合同见 `src/rtl-pack/docs/mvp-toolchain.md`，分析前读取 `src/rtl-pack/skills/rtl-query/SKILL.md`。
+源码仓库先读 `quickstart.md`，使用 `./src/rtl-pack/bin/rtl`；安装器默认只使用本地缓存，允许联网时才显式使用 `--online`。Source code zip/tar 不含完整离线运行时。本次 GitHub 交付只有源码与标签。
 
 ## 使用约定
 
-- 用中文回复。当前流程仅使用源码与 Runtime 工具，不构建或读取知识库。
-- 源码仓库 CLI 为 `./src/rtl-pack/bin/rtl`，安装脚本为 `./src/rtl-pack/scripts/install-tools`；离线包使用上面的 `bin/` 入口。
-- 待分析工程可位于 `projects/<name>/`；已发出的使用说明采用的 `src/workspace/projects/<name>/` 同样支持。`source/` 是只读源码，工程根保存配置，`analysis/` 保存结果与任务。内置 `projects/example` 可直接试用。
-- 按实际构建文件确认顶层、文件顺序、include、宏、参数和 single_unit；缺少关键配置时询问，不猜测。
-- 回答引用源码或工具证据，明确未知与分析范围。不将工具输出当作完整功能证明。
-- 私有源码、模型凭据、工具安装目录和分析产物不提交 Git。
+- 工程默认位于 `projects/<name>/`，`src/workspace/projects/<name>/` 同样支持。工程包含只读 `source/`、`rtl-project.json`、`runtime-query-build.json` 和可写 `analysis/`。
+- 按实际构建文件确认 top、文件顺序、include、宏、参数与 single_unit；缺少关键配置时询问。
+- 明确要求结构建库或恢复时，读取 `src/rtl-pack/skills/rtl-knowledge-build/SKILL.md`，按一次公共命令的机器回执处理 READY / PARTIAL / BLOCKED。
+- 明确要求语义草稿或恢复时，读取 `src/rtl-pack/skills/rtl-build2-draft/SKILL.md`。先核对 Build1 身份与范围，按阶段保存，保留 unknown、未覆盖项和真实退出码。源码仓库命令映射以该 Skill 的“源码仓库入口”为准。
+- 生成正式结构 Manual 或查看未审核草稿时，读取 `src/rtl-pack/skills/rtl-knowledge-manual/SKILL.md`。草稿预览留在 task；发布语义必须有适用的独立审核、批准和受控发布，不能把自检当批准。
+- 回答 RTL 问题前读取 `src/rtl-pack/skills/rtl-query/SKILL.md`。已明确提供有效候选、Build 身份与 exact target 时，使用公共入口复用适用的已发布知识；没有可靠目标或候选时直接走源码 / Runtime，不猜路径或搜索任意旧知识库。按 DIRECT / CONTEXT / BYPASS 复用证据和补齐明确缺口。
+- Build1 Fact 只证明结构；Build2 草稿保持 DRAFT_UNREVIEWED。答案引用源码或适用工具/知识证据，明确未知和分析范围。
+- 用户 RTL、凭据、工具缓存和分析产物不提交 Git。
 
 ## 修改约定
 
-- 修改前查看 Git 状态，保留用户已有改动，仅修改授权范围。
-- 优先复用现有工具和入口，不自行开发 RTL parser、elaborator 或分析算法。
-- 按修改范围运行相关测试与 `git diff --check`；只报告实际验证结果。
-- `./check` 运行当前产品检查与回归；失败时如实报告，不跳过断言伪造通过。
-- 提交说明使用中文，推送使用已配置的 GitHub 远程。
+先检查 Git 状态，保留已有改动。复用现有 RTL 工具和入口；不自行开发 parser、elaborator 或分析算法。修改后按范围运行测试、`git diff --check` 与 `./check`，只报告实际结果。提交说明用中文，推送到已配置的 GitHub 远程。

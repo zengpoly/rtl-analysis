@@ -21,3 +21,11 @@ RTL_ANALYSIS_PYSLANG_SITE="$PWD/.local/tools/pyslang/11.0.0/site-packages" \
 公开内容检查覆盖待提交文件：凭据模式、私网地址、本机路径、历史任务引用、敏感文件名、用户工程、二进制文件和本地 Markdown 链接。第三方许可证原文保留。
 
 未执行真实大工程、模型准确率评估、同事客户端验收或离线包重建；本次交付是源码、使用说明与版本标签。
+
+## 知识构建预览版
+
+同一环境与锁定依赖下运行本分支 `./check`：377 项测试，361 项通过、16 项因外部已审核 Q2 工程未提供而跳过。全部七个公共 Skill 与 domain manifest 所引用文件存在；源码 Build2 状态 helper 的帮助入口可执行。
+
+实际执行 `projects/example` 的 `model knowledge-build --scope whole-design`：首次回执 READY，candidate 和 Manual 都 READY，编译 1 次、渲染 1 次；相同命令再次回执 READY，candidate 和 Manual 均复用，编译 0 次、渲染 0 次。示例源码 SHA256 不变。生成的候选、Manual 和分析状态只保存在本地忽略目录，不提交 Git。
+
+本分支打包脚本调整为包含全部公共 Skills、模板和配置，通过语法与路径完整性检查；完整离线包尚未重建或验收。本次没有调用模型生成 Build2 语义草稿，Build2 的阶段保存、恢复与预览由产品夹具回归覆盖；这不等于真实工程的语义审核通过。

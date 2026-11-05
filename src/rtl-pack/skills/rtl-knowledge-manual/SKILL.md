@@ -9,6 +9,8 @@ metadata:
 
 # RTL Knowledge Manual
 
+源码仓库根使用 `./src/rtl-pack/bin/rtl` 替换下方 `rtl`；完整离线包使用 `./bin/rtl`。
+
 ## When to use
 
 用户要求从现有Knowledge candidate生成或重新生成Manual时使用。candidate自己提供build identity与Analysis Scope；不要让用户或Agent重复猜scope。

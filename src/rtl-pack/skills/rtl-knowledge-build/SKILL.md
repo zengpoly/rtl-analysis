@@ -9,6 +9,8 @@ metadata:
 
 # Build1 RTL Knowledge
 
+源码仓库根使用 `./src/rtl-pack/bin/rtl` 替换下方 `rtl`；完整离线包使用 `./bin/rtl`。参数和机器状态规则相同。
+
 ## When to use
 
 用户要求从RTL Project建立、恢复或验证Build1结构知识与当前Manual时使用。它只构建compiler-grounded结构世界；不生成AI semantic、Behavior、coverage或Query答案。

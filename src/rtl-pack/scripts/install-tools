@@ -18,8 +18,8 @@ from pathlib import Path
 
 
 OFFLINE_PACKAGE_HINT = (
-    "Restore the complete rtl-analysis-agent-V1-linux-x86_64.tar.gz "
-    "(V1 offline package: V1 离线安装包（Linux x86_64）). "
+    "Restore the complete rtl-analysis-knowledge-preview-1-linux-x86_64.tar.gz "
+    "(Knowledge preview offline package: 知识构建预览包（Linux x86_64）). "
     "Source code zip/tar archives do not contain the offline runtime or cache; "
     "transfer the full package from a connected machine."
 )

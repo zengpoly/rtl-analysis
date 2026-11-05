@@ -15,7 +15,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ARCHIVE = "rtl-analysis-agent-V1-linux-x86_64.tar.gz"
+ARCHIVE = "rtl-analysis-knowledge-preview-1-linux-x86_64.tar.gz"
 
 
 class OfflineInstallTest(unittest.TestCase):
@@ -186,7 +186,7 @@ class OfflineGuidanceTest(unittest.TestCase):
     def test_release_guidance_distinguishes_source_archive(self):
         for relative in ("README.md", "packaging/README.md"):
             text = (ROOT / relative).read_text()
-            self.assertIn("V1 离线安装包（Linux x86_64）", text)
+            self.assertIn("知识构建预览包（Linux x86_64）", text)
             self.assertIn("Source code", text)
             self.assertIn(ARCHIVE, text)
             self.assertIn("github.com/zengpoly/rtl-analysis/releases", text)
