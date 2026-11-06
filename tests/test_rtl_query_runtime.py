@@ -53,6 +53,130 @@ class RuntimeQueryTests(unittest.TestCase):
         self.assertGreater(evidence["line_start"], 0)
         self.assertRegex(evidence["sha256"], r"^[0-9a-f]{64}$")
 
+    def test_python_native_ast_and_state_reuse(self) -> None:
+        with self.session() as session:
+            self.assertIn("python", session.ready_result()["operations"])
+            first = session.query({
+                "id": "native-node", "op": "python",
+                "code": "leaf = root.lookupName('query_top.u_leaf')\n"
+                        "result = {'definition': leaf.definition.name, 'evidence': evidence(leaf)}",
+            })
+            second = session.query({
+                "id": "native-statements", "op": "python",
+                "code": "assignments = []\n"
+                        "def collect(node):\n"
+                        "    if isinstance(node, pyslang.ast.AssignmentExpression):\n"
+                        "        assignments.append({'nba': node.isNonBlocking, 'evidence': evidence(node)})\n"
+                        "leaf.body.visit(collect)\n"
+                        "result = assignments",
+            })
+            self.assertEqual(first["status"], "ok", first)
+            self.assertEqual(first["result"]["definition"], "query_leaf")
+            self.assertEqual(first["result"]["evidence"]["path"], "design.sv")
+            self.assertEqual(second["status"], "ok", second)
+            self.assertEqual(len(second["result"]), 2)
+            self.assertTrue(all(x["nba"] for x in second["result"]))
+            self.assertTrue(all(x["evidence"]["line_start"] > 0 for x in second["result"]))
+            self.assertEqual(second["telemetry"]["compilation_count"], 1)
+            self.assertEqual(second["telemetry"]["query_count"], 2)
+            self.assertTrue(second["telemetry"]["session_reused"])
+        self.assertEqual(session.python_globals, {})
+        with self.session() as fresh:
+            result = fresh.query({"id": "fresh", "op": "python", "code": "result = 'leaf' in globals()"})
+            self.assertIs(result["result"], False)
+
+    def test_python_errors_and_output_do_not_break_jsonl(self) -> None:
+        requests = [
+            {"id": "print", "op": "python", "code": "import sys\nprint('hello')\nprint('note', file=sys.stderr)\nresult = 3"},
+            {"id": "syntax", "op": "python", "code": "result = ("},
+            {"id": "object", "op": "python", "code": "result = root"},
+            {"id": "exit", "op": "python", "code": "raise SystemExit(7)"},
+            {"id": "next", "op": "python", "code": "print(pyslang.__version__)"},
+            {"id": "legacy", "op": "scope", "path": "query_top", "name": "u_leaf"},
+        ]
+        with self.session() as session:
+            output = io.StringIO()
+            runtime.serve(session, io.StringIO("".join(json.dumps(x) + "\n" for x in requests)), output)
+        ready, *results = [json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertEqual(len(results), len(requests))
+        self.assertEqual(results[0]["result"], 3)
+        self.assertEqual(results[0]["stdout"], "hello\n")
+        self.assertEqual(results[0]["stderr"], "note\n")
+        for result, error in zip(results[1:4], ["SyntaxError", "TypeError", "SystemExit"]):
+            self.assertEqual(result["status"], "query_error", result)
+            self.assertEqual(result["error_type"], error)
+            self.assertNotIn("result", result)
+        self.assertIsNone(results[4]["result"])
+        self.assertEqual(results[4]["stdout"], "11.0.0\n")
+        self.assertEqual(results[5]["records"][0]["definition"], "query_leaf")
+        self.assertEqual(results[5]["telemetry"]["compilation_count"], 1)
+
+    def test_python_output_bounds_and_timeout(self) -> None:
+        from unittest.mock import patch
+
+        with self.session() as session:
+            printed = session.query({"id": "print-limit", "op": "python", "code": "print('中' * 100000)\nresult = 1"})
+            large = session.query({"id": "result-limit", "op": "python", "code": "result = 'x' * 600000"})
+            with patch.object(runtime, "PYTHON_QUERY_TIMEOUT_SECONDS", 0.02):
+                timeout = session.query({"id": "timeout", "op": "python", "code": "while True:\n    pass"})
+            recovered = session.query({"id": "recovered", "op": "python", "code": "result = compilation is root.compilation"})
+        self.assertEqual(printed["status"], "partial")
+        self.assertTrue(printed["stdout_truncated"])
+        self.assertEqual(printed["result"], 1)
+        self.assertLessEqual(len(printed["stdout"].encode()), runtime.MAX_PYTHON_LOG_BYTES)
+        self.assertEqual(large["status"], "partial")
+        self.assertEqual(large["completeness"], "truncated")
+        self.assertNotIn("result", large)
+        self.assertEqual(timeout["status"], "query_error")
+        self.assertEqual(timeout["error_type"], "TimeoutError")
+        self.assertEqual(recovered["status"], "ok", recovered)
+        self.assertTrue(recovered["result"])
+
+    def test_python_validates_requests_before_execution(self) -> None:
+        with self.session() as session:
+            for code in [None, "", 42, "x" * (runtime.MAX_REQUEST_BYTES + 1)]:
+                with self.subTest(code_type=type(code).__name__):
+                    result = session.query({"id": "invalid-code", "op": "python", "code": code})
+                    self.assertEqual(result["status"], "unsupported")
+            session.invalidated = True
+            stale = session.query({"id": "stale-python", "op": "python", "code": "raise RuntimeError('must not execute')"})
+            self.assertEqual(stale["status"], "stale_input")
+
+    def test_python_source_change_invalidates_result_and_later_queries(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory)
+            shutil.copyfile(FIXTURE / "design.sv", source / "design.sv")
+            shutil.copyfile(FIXTURE / "build.json", source / "build.json")
+            with runtime.RuntimeQuerySession.open(
+                source_root=source, build_path=source / "build.json",
+                project_name="python-input-drift", source_revision="fixture-v1",
+            ) as session:
+                target = repr(str(source / "design.sv"))
+                result = session.query({
+                    "id": "changed", "op": "python",
+                    "code": f"from pathlib import Path\np = Path({target})\np.write_text(p.read_text() + '\\n')\nresult = 42",
+                })
+                later = session.query({"id": "later", "op": "python", "code": "result = 7"})
+        self.assertEqual(result["status"], "stale_input")
+        self.assertNotIn("result", result)
+        self.assertEqual(later["status"], "stale_input")
+
+    def test_python_native_analysis_and_api_discovery(self) -> None:
+        with self.session() as session:
+            result = session.query({
+                "id": "analysis", "op": "python",
+                "code": "manager = get_analysis()\n"
+                        "signal = root.lookupName('query_top.status')\n"
+                        "result = {'shared': manager is get_analysis(),\n"
+                        "          'drivers': [str(d.source) for d in manager.getDrivers(signal)],\n"
+                        "          'assignment_api': dir(pyslang.ast.AssignmentExpression)}",
+            })
+        self.assertEqual(result["status"], "ok", result)
+        self.assertTrue(result["result"]["shared"])
+        self.assertTrue(any("AlwaysFF" in d for d in result["result"]["drivers"]))
+        self.assertIn("isNonBlocking", result["result"]["assignment_api"])
+        self.assertIn("analysis_init_ms", result["telemetry"])
+
     def test_scope_reports_active_generate_and_parameter_specialization(self) -> None:
         with self.session() as session:
             root = session.query({"id": "root", "op": "scope", "path": "query_top"})
@@ -579,18 +703,25 @@ class RuntimeQueryTests(unittest.TestCase):
                     str(project / "build.json"),
                 ],
                 input=json.dumps(
-                    {"id": "binding", "op": "bindings", "instance": "query_top.u_leaf"}
+                    {"id": "native", "op": "python", "code": "node = root.lookupName('query_top.u_leaf')\nresult = {'module': node.definition.name, 'evidence': evidence(node)}"}
                 )
-                + "\n",
+                + "\n" + json.dumps(
+                    {"id": "binding", "op": "bindings", "instance": "query_top.u_leaf"}
+                ) + "\n",
                 capture_output=True,
                 text=True,
                 check=False,
             )
         self.assertEqual(completed.returncode, 0, completed.stderr)
-        ready, result = [json.loads(line) for line in completed.stdout.splitlines()]
+        ready, native, result = [json.loads(line) for line in completed.stdout.splitlines()]
         self.assertEqual(ready["status"], "ready")
+        self.assertEqual(native["status"], "ok", native)
+        self.assertEqual(native["result"]["module"], "query_leaf")
+        self.assertEqual(native["result"]["evidence"]["path"], "source/design.sv")
+        self.assertEqual(native["result"]["evidence"]["locator"], "design.sv")
         self.assertEqual(result["status"], "ok")
         self.assertEqual(result["telemetry"]["compilation_count"], 1)
+        self.assertEqual(result["telemetry"]["query_count"], 2)
 
     def test_public_cli_preserves_compile_failure_details(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

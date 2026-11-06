@@ -3,7 +3,7 @@ name: rtl-query
 description: 当用户需要在冻结 SystemVerilog/Verilog build identity 下分析 elaboration、instance hierarchy、port binding、symbol/type、signal writer、时序过程或跨模块功能流时使用；以最少 task-local PySlang 查询关闭确定性事实，再读最小完整源码并综合语义。
 metadata:
   status: active
-  version: "1.13"
+  version: "1.14"
   requires: 有效 rtl-project.json、runtime-query-build-v1 build identity、锁定 PySlang 11.0.0 与 rtl query CLI
 ---
 
@@ -37,7 +37,7 @@ Runner 的 readable 结果把已发布知识正文、对象/实例/定义映射�
 
 已交付的 exact instance identity、module/instance name、数字结构事实和 binding expression 必须从 readable/structured truth **逐字复制**，不缩写、重命名或根据模式改写。最终回答前对用户明确要求的 exact identity 集合做逐项对照；发现 missing/altered 时报告而不猜测修补。本 Skill 不授权用第二个模型或隐式改写器“纠正”答案。
 
-仅在存在适用的 deterministic obligation 时启动 runtime；同一冻结 build identity 在任务内复用一个 query worker，compile/elaborate 一次，任务结束关闭。不得跨任务保留 compiler state。四个 primitive 固定为 `scope / inspect / bindings / uses`，不增加另一套分析模型。
+仅在存在适用的 deterministic obligation 时启动 runtime；同一冻结 build identity 在任务内复用一个 query worker，compile/elaborate 一次，任务结束关闭。不得跨任务保留 compiler state。通过 `python` 查询直接调用 PySlang 原生 API；`scope / inspect / bindings / uses` 保留为便利操作。
 
 ## 1. 先选路线，不先启动 runtime
 
@@ -81,25 +81,38 @@ Semantic 问题只选少量会改变答案、且能闭合边界的 build-depende
 
 ## 4. 建立唯一 runtime session
 
-build identity 必须冻结 files/filelists、top、file order、single-unit、include、define、路径环境和可选 top parameter。启动：
+build identity 必须冻结 files/filelists、top、file order、single-unit、include、define、路径环境和可选 top parameter。Portable Workspace 启动：
 
 ```sh
 ./bin/rtl --project <project-dir> query --build <project-dir>/<runtime-query-build.json>
 ```
 
-进程先输出一行 `status=ready`；随后 stdin/stdout 每行一个 JSON object。保持进程到任务结束，EOF 后释放状态。向已运行的 session 先发送 discovery request，读取返回的 exact identity 后才能组成依赖它的下一条 query：
+进程先输出一行 `status=ready`，其 `operations` 包含 `python`；随后 stdin/stdout 每行一个 JSON object。保持进程到任务结束，EOF 后释放状态。以下 discovery 查询取得顶层身份：
 
 ```json
-{"id":"members","op":"scope","path":"<known-scope>","name":"<literal-name>","limit":50}
+{"id":"tops","op":"python","code":"result = [x.hierarchicalPath for x in root.topInstances]"}
 ```
 
-读取结果后，在同一会话发送下一条 query；`inspect` 的 `path` 字段可使用上一条 response 返回的 exact hierarchical path 或 task-local handle。不得在同一预写 batch 中引用尚未返回的 identity；只有 identity 已知且彼此独立的查询才可预先批量发送。
+Agent Runner 已由宿主建立会话；把查询代码写入任务临时文件，调用 `rtlq python <query.py>`，或以 `rtlq python -` 从 stdin 读取代码。这两个入口都在已有 worker 中执行；不在外部 Python 中重建 Compilation。
 
-`limit` 的安全默认值是 50，硬上限是 100，合法范围为 `1..100`。不得自行猜测更大的值。compile failure 后只做有界 build/source 检查；不补 stub、删文件或猜宏。
+读取结果后，在同一会话发送下一条 query；可继续使用上次保存的原生对象或返回的 exact hierarchical path。不得在同一预写 batch 中引用尚未返回的 identity；只有 identity 已知且彼此独立的查询才可预先批量发送。
+
+便利操作的 `limit` 默认 50，合法范围 `1..100`。Python 查询自己限定对象范围和返回字段；查询计数不等于代码内部原生 API 调用次数。compile failure 后只做有界 build/source 检查；不补 stub、删文件或猜宏。
 
 此命令从任何调用 CWD 都以 Workspace root 解析相对路径，并使用 bundled runtime。不要改用裸 `rtl`、`python` 或 `capability/` 内部入口。
 
-## 5. 四个 primitive 的事实边界
+## 5. 选择原生 API，执行 Python 查询
+
+每次只关闭当前缺少的事实：问题 → 选择 API、生成代码 → Agent 在 Runtime 执行 → 读取结果 → 继续查询或回答。读取类型、表达式运算符、条件分支、赋值或原生分析信息时，直接使用 `pyslang` 与现有 `compilation / root`；不限于四种便利操作。
+
+- 把所需的 JSON 值赋给 `result`；原生对象可保存在变量中供后续查询使用，不能直接放入 JSON。`result` 每次重置为 null，其他变量和函数保留到任务结束。
+- 已知名称先用原生 `find / lookupName` 或既有 `scope` 精确定位；复用返回的对象，避免扫描整个设计。需要方法名、类型属性或签名时，在当前会话用 `dir / help` 查询，不猜 API。
+- 用 `evidence(node)` 或 `source_evidence(range)` 附上源码证据；`get_analysis()` 按需取得共享 AnalysisManager。`ok / completeness=executed` 只表示代码执行成功，不能替代范围完整性与证据判断。代码中自行计算的推断仍须单独说明。
+- 查询保持 RTL 源码和编译配置不变，读取现有设计对象；不用查询代码重建或改写 Compilation。返回 `query_error` 时读 `error_type / line / message` 后按有依据的一次修正规则处理；失败不会回滚已经执行的 Python 语句。`stale_input` 后停止使用整个会话。
+
+首次使用 Python 查询前，必须读 [查询分类与使用指南](references/python-query.md)，按“问题 → 对象 → API → 返回信息”选择类别。指南覆盖设计层级、定位、端口、参数/generate、类型、表达式、赋值、条件、事件、函数、驱动、控制流、断言、常量、源码、语法及诊断，并提供可执行示例。后续遇到新类别或不确定 API 用法时回查对应部分。宿主负责 worker 的执行环境和进程时限。
+
+### 便利操作的固定返回范围
 
 | `op` | 最小输入 | 能证明什么 | 不能证明什么 |
 |---|---|---|---|
@@ -108,7 +121,7 @@ build identity 必须冻结 files/filelists、top、file order、single-unit、i
 | `bindings` | returned exact child `instance`/handle，可选 exact `port` | immediate formal/direction/internal endpoint、actual/internal expression 与 evidence | transitive connectivity、bit equivalence、完整 operator/conversion tree、protocol meaning |
 | `uses` | returned exact `path`/handle；`mode=drivers` 或 `procedure_reads` | native drivers/ranges、procedure kind、event controls/read set、analysis diagnostics | blocking/NBA operator、general fanout、dependency cone、interprocedural effect、temporal proof |
 
-保留原始状态：`ok / ambiguous / not_found / unsupported / partial / compile_failed / stale_input`。`not_found` 只表示当前 build/scope 未返回；`partial` 或 `truncated` 绝不是完整空集。
+表中的限制仅指这四种固定返回，不限制 `python` 访问相应原生 API。保留原始状态：`ok / query_error / ambiguous / not_found / unsupported / partial / compile_failed / stale_input`。`not_found` 只表示当前 build/scope 未返回；`partial` 或 `truncated` 绝不是完整空集。
 
 ## 6. 永远不发明 elaborated path
 
@@ -116,11 +129,11 @@ build identity 必须冻结 files/filelists、top、file order、single-unit、i
 
 1. 用户或 build identity 给出的 anchor，且 runtime 已成功解析；
 2. `status=ready` 或 query result 返回的 exact path/handle；
-3. 在已知 scope 中以 literal `name/kind` 有界发现后返回的唯一 identity。
+3. 在已知 scope 中通过原生 API 或 `scope` 便利操作按名称/类型有界发现后返回的唯一 identity。
 
 源码中的相似名称只是 locator，不是 elaborated identity。不得拼接 `parent.child` 猜路径，也不得从 ambiguous candidates 任选一个继续递归。
 
-无 exact symbol 时，对当前未解析 locator 做有界 literal source search 取得候选 spelling；获得新定位证据后再在已知 scope 内用 `scope` 消歧，不重复没有新增信息的搜索。优先级为：exact returned identity → local scope discovery → one evidence-backed parent correction → minimal Source fallback。若 runtime 没返回 exact identity，停止路径递归。
+无 exact symbol 时，对当前未解析 locator 做有界 literal source search 取得候选 spelling；获得新定位证据后再在已知 scope 内用原生 API 或 `scope` 消歧，不重复没有新增信息的搜索。优先级为：exact returned identity → local scope discovery → one evidence-backed parent correction → minimal Source fallback。若 runtime 没返回 exact identity，停止路径递归。
 
 ## 7. 每项 obligation 的最小查询与重试
 
@@ -128,7 +141,7 @@ build identity 必须冻结 files/filelists、top、file order、single-unit、i
 
 1. 发一个 primary query；
 2. `ok` 且结果完整：消费结果并关闭 obligation；
-3. 参数错误，或能由已返回 candidate、handle、parent、filter 修正的 `ambiguous/partial/not_found`，共只允许一次有依据的 corrected retry；
+3. 参数/API 使用错误，或能由已返回 candidate、handle、parent、filter 修正的 `query_error/ambiguous/partial/not_found`，共只允许一次有依据的 corrected retry；
 4. 没有修正依据、`unsupported`，或 corrected retry 后仍未闭合：立即读最小完整 Source 或标 `UNRESOLVED`。
 
 不得连续猜路径，不得以不同 primitive 对同一失败身份盲试。一次 primary + 一次有证据的 corrected retry 是硬预算；相同 obligation 的第二次结果没有新 evidence 时终止 query 路线。该预算只约束失败查询的修正；成功取得新定位证据后的必要 discovery 或下一跳不是重试，但仍须对应 obligation。
@@ -153,11 +166,11 @@ build identity 必须冻结 files/filelists、top、file order、single-unit、i
 
 ### Sequential / temporal state
 
-已知局部 register/process 且完整 Source 能唯一给出 reset、enable、hold、blocking/NBA 或 branch priority 时，使用 `SOURCE_FAST_PATH`。只有 writer identity/active instance/range 本身需要 frozen build 消歧时才用 `uses`，然后读取包含全部分支的完整 process。目标存在 transaction 时按协议需要跟踪 valid、payload 和 sideband；不要构造微型 simulator。
+已知局部 register/process 且完整 Source 能唯一给出 reset、enable、hold、blocking/NBA 或 branch priority 时，使用 `SOURCE_FAST_PATH`。需要 frozen build 消歧时，用 Python 查询原生 driver、process、条件与赋值对象，或用 `uses` 定位，再补齐尚未覆盖的完整 Source。目标存在 transaction 时按协议需要跟踪 valid、payload 和 sideband；不要构造微型 simulator。
 
 ### Cross-boundary functional flow
 
-先按用户问题列出必须闭合的 lifecycle stages 和身份连续性，而不是先枚举 module。request 与 response 分开追踪，用真实 tag/ID/entry/handshake 等机制连接；名称相似不构成链。每个 requested stage 至少有一个具体边界和 source anchor。工具只定位 local scope/binding/writer，功能解释与异常分支由局部 Source 综合。
+先按用户问题列出必须闭合的 lifecycle stages 和身份连续性，而不是先枚举 module。request 与 response 分开追踪，用真实 tag/ID/entry/handshake 等机制连接；名称相似不构成链。每个 requested stage 至少有一个具体边界和 source anchor。原生查询返回当前对象、连接、表达式与分析事实；功能解释与异常分支由模型结合必要 Source 综合。
 
 ## 10. Evidence 复用与冲突纪律
 

@@ -13,6 +13,7 @@ import uuid
 
 
 SUCCESS = {"ok", "partial"}
+MAX_PYTHON_CODE_BYTES = 65_536
 
 
 def limit(value: str) -> int:
@@ -28,6 +29,9 @@ def limit(value: str) -> int:
 def parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(prog="rtlq", description=__doc__)
     commands = root.add_subparsers(dest="command", required=True)
+
+    python = commands.add_parser("python", help="run Python against the existing PySlang Compilation")
+    python.add_argument("code_file", help="UTF-8 query file, or - for stdin; assign JSON output to result")
 
     scope = commands.add_parser("scope", help="list direct members of a known scope")
     scope.add_argument("target")
@@ -85,7 +89,16 @@ def request(args: argparse.Namespace) -> dict[str, object]:
         base["actor"] = actor
     if phase:
         base["phase"] = phase
-    if args.command == "scope":
+    if args.command == "python":
+        if args.code_file == "-":
+            code = sys.stdin.read(MAX_PYTHON_CODE_BYTES + 1)
+        else:
+            with Path(args.code_file).open(encoding="utf-8") as stream:
+                code = stream.read(MAX_PYTHON_CODE_BYTES + 1)
+        if not code.strip() or len(code.encode("utf-8")) > MAX_PYTHON_CODE_BYTES:
+            raise ValueError("Python query must be non-empty and within 65536 bytes")
+        base["code"] = code
+    elif args.command == "scope":
         base.update({"path": args.target, "limit": args.limit})
         if args.name is not None:
             base["name"] = args.name
@@ -130,8 +143,8 @@ def request(args: argparse.Namespace) -> dict[str, object]:
 def main() -> int:
     args = parser().parse_args()
     socket_path = Path(os.environ.get("RTLQ_SOCKET", "/tmp/agent-runner/rtlq.sock"))
-    payload = request(args)
     try:
+        payload = request(args)
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
             client.settimeout(300)
             client.connect(str(socket_path))

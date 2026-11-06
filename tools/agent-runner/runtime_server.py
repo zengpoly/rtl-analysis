@@ -70,6 +70,9 @@ def bounded_request(request: dict[str, Any]) -> dict[str, Any]:
         "request_id": str(request.get("id", ""))[:128],
         "operation": str(request.get("op", ""))[:32],
     }
+    if isinstance(request.get("code"), str):
+        code = request["code"].encode("utf-8")
+        result.update({"code_sha256": hashlib.sha256(code).hexdigest(), "code_bytes": len(code)})
     for key in (
         "path", "instance", "name", "kind", "port", "mode", "limit",
         "target", "sections", "request_kind", "additional_requirements",

@@ -111,10 +111,10 @@ class DomainSkillLayoutTests(unittest.TestCase):
         for forbidden in ("SQLite schema", "Jinja", "OpenC910"):
             self.assertNotIn(forbidden, mapping)
 
-    def test_runtime_query_v12_is_generic_and_bounded(self) -> None:
+    def test_runtime_query_v14_is_generic_and_bounded(self) -> None:
         runtime = (PACK / "skills/rtl-query/SKILL.md").read_text()
         for contract in (
-            'version: "1.13"',
+            'version: "1.14"',
             "SOURCE_FAST_PATH",
             "RUNTIME_QUERY_PATH",
             "MIXED_PATH",

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Task-local, compile-once PySlang query worker.
 
-This module deliberately projects a small set of native compiler facts.  It is
-not a language server, graph, persistent index, or RTL answer engine.
+Agent Python queries access the native compiler objects in this process.  The
+four structured convenience operations remain available for existing callers.
 """
 
 from __future__ import annotations
@@ -10,12 +10,14 @@ from __future__ import annotations
 import argparse
 import contextlib
 import hashlib
+import io
 import json
 import os
 import re
 import shlex
 import sys
 import time
+import traceback
 from pathlib import Path
 from typing import Any, Iterator
 
@@ -39,8 +41,10 @@ MAX_BUILD_ITEMS = 10_000
 MAX_TOPS = 32
 MAX_DIAGNOSTIC_ARGS = 8
 MAX_DIAGNOSTIC_ARG_BYTES = 512
-SUPPORTED_OPERATIONS = ("scope", "inspect", "bindings", "uses")
+SUPPORTED_OPERATIONS = ("scope", "inspect", "bindings", "uses", "python")
 SUPPORTED_USE_MODES = ("drivers", "procedure_reads")
+MAX_PYTHON_LOG_BYTES = 16_384
+PYTHON_QUERY_TIMEOUT_SECONDS = 30.0
 
 
 class QueryRuntimeError(RuntimeError):
@@ -48,6 +52,24 @@ class QueryRuntimeError(RuntimeError):
         super().__init__(message)
         self.code = code
         self.details = details or {}
+
+
+class _QueryLog(io.StringIO):
+    """Capture Python print/help output without growing an unbounded buffer."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.byte_count = 0
+        self.truncated = False
+
+    def write(self, value: str) -> int:
+        remaining = MAX_PYTHON_LOG_BYTES - self.byte_count
+        encoded = value.encode("utf-8")
+        text = encoded[:remaining].decode("utf-8", errors="ignore")
+        self.byte_count += len(text.encode("utf-8"))
+        self.truncated |= len(encoded) > remaining
+        super().write(text)
+        return len(value)
 
 
 def _sha256_bytes(value: bytes) -> str:
@@ -234,6 +256,7 @@ class RuntimeQuerySession:
         self.source_snapshots: dict[str, dict[str, Any]] = {}
         self.input_snapshots: dict[str, dict[str, Any]] = {}
         self.invalidated = False
+        self.python_globals: dict[str, Any] = {}
 
     @classmethod
     def open(
@@ -385,6 +408,7 @@ class RuntimeQuerySession:
         if self.closed:
             return
         self.closed = True
+        self.python_globals.clear()
         self.handles.clear()
         self.object_handles.clear()
         self.source_snapshots.clear()
@@ -400,6 +424,14 @@ class RuntimeQuerySession:
             "schema": SESSION_SCHEMA,
             "status": "ready",
             "operations": list(SUPPORTED_OPERATIONS),
+            "python": {
+                "globals": ["pyslang", "compilation", "root", "source_manager",
+                            "get_analysis", "evidence", "source_evidence"],
+                "result_variable": "result",
+                "state": "task-local",
+                "timeout_seconds": PYTHON_QUERY_TIMEOUT_SECONDS,
+                "execution": "trusted-python; not a sandbox",
+            },
             "compilation_identity": self.identity,
             "diagnostic_summary": self.diagnostic_summary,
             "diagnostics": self.diagnostics,
@@ -494,6 +526,69 @@ class RuntimeQuerySession:
         self.total_query_ms += query_ms
         result["telemetry"] = self._telemetry(query_ms)
         return self._bound_payload(result)
+
+    def _query_python(self, request_id: str, request: dict[str, Any]) -> dict[str, Any]:
+        code = request.get("code")
+        if (not isinstance(code, str) or not code.strip()
+                or len(code.encode("utf-8")) > MAX_REQUEST_BYTES):
+            raise QueryRuntimeError("unsupported", "code must be non-empty Python within the request byte limit")
+
+        # Native APIs are intentionally not allowlisted. This runs trusted Agent
+        # code with the worker's OS permissions, not in a Python security sandbox.
+        namespace = self.python_globals
+        namespace.update({
+            "__name__": "__runtime_query__",
+            "pyslang": self.pyslang,
+            "compilation": self.compilation,
+            "root": self.root,
+            "source_manager": self.source_manager,
+            "get_analysis": self._analysis,
+            "evidence": self._evidence_for,
+            "source_evidence": self._evidence,
+            "result": None,
+        })
+        stdout, stderr = _QueryLog(), _QueryLog()
+        response = self._base(request_id, "python")
+        deadline = time.monotonic() + PYTHON_QUERY_TIMEOUT_SECONDS
+        previous_trace = sys.gettrace()
+
+        def check_deadline(frame: Any, event: str, arg: Any) -> Any:
+            # Python checkpoints only; the host must bound the worker lifetime
+            # if a native extension call does not return to Python.
+            if time.monotonic() >= deadline:
+                raise TimeoutError("Python query exceeded its execution time budget")
+            return check_deadline
+
+        try:
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                sys.settrace(check_deadline)
+                try:
+                    exec(compile(code, "<runtime-query>", "exec"), namespace, namespace)
+                    # Freeze JSON output now: later queries may mutate saved Python
+                    # values. Native objects stay in the namespace, never in JSON.
+                    value = json.loads(json.dumps(namespace["result"], sort_keys=True, allow_nan=False))
+                finally:
+                    sys.settrace(previous_trace)
+            response.update({"status": "ok", "result": value, "completeness": "executed"})
+        except (Exception, SystemExit) as error:
+            message, _ = _bounded_text(str(error), MAX_EXCERPT_BYTES)
+            frames = [f for f in traceback.extract_tb(error.__traceback__) if f.filename == "<runtime-query>"]
+            response.update({
+                "status": "query_error", "error_type": type(error).__name__,
+                "message": message, "completeness": "unknown",
+                "line": getattr(error, "lineno", None) or (frames[-1].lineno if frames else None),
+            })
+
+        # Recheck even after an exception; a failed query does not roll back Python
+        # state or file changes, and changed inputs invalidate every saved object.
+        self._verify_inputs()
+        response.update({
+            "stdout": stdout.getvalue(), "stderr": stderr.getvalue(),
+            "stdout_truncated": stdout.truncated, "stderr_truncated": stderr.truncated,
+        })
+        if response["status"] == "ok" and (stdout.truncated or stderr.truncated):
+            response.update({"status": "partial", "completeness": "output-truncated"})
+        return response
 
     def _bound_payload(self, result: dict[str, Any]) -> dict[str, Any]:
         records = result.get("records")
